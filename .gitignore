@@ -1,0 +1,21 @@
+# 构建产物
+build/
+electron/dist/
+electron/node_modules/
+node_modules/
+
+# flatc 生成的协议代码（由 core/ipc 的 schema_gen 生成）
+electron/src/generated/
+
+# 运行期产物
+logs/
+*.log
+
+# Python 缓存（scripts/build.py 会被 run.py import）
+__pycache__/
+*.pyc
+
+# 编辑器 / 工具
+.vs/
+.vscode/
+*.user
