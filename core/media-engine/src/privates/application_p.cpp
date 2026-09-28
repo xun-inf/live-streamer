@@ -1,5 +1,6 @@
 #include "application_p.h"
 
+#include "handlers/ipchandler.h"
 #include "ipcserver.h"
 #include "main_generated.h"
 #include "utils/log.h"
@@ -84,11 +85,14 @@ bool MeApplicationPrivate::Initialize(int argc, char** argv) {
   if (!parentPid.empty()) {
     m_parentPid = std::stoul(parentPid);
   }
+
+  // 引擎自带的 IPC 域处理器在这里挂上（窗口域等）
+  InitializeIpcHandlers();
   return true;
 }
 
 // 消息是"4 字节长度前缀 + FlatBuffer"，前缀由 IpcServer 剥掉，这里只认 Envelope。
-// 校验完按域分发：具体消息由各域的 router 处理，加域不用动这里
+// 校验完按 Domain 找注册的 handler 分发：加业务只要注册新的 handler，这里不用动
 void MeApplicationPrivate::OnMessage(std::vector<uint8_t> message) {
   flatbuffers::Verifier verifier(message.data(), message.size());
   if (!VerifyEnvelopeBuffer(verifier)) {
@@ -97,17 +101,48 @@ void MeApplicationPrivate::OnMessage(std::vector<uint8_t> message) {
     return;
   }
   const auto* envelope = GetEnvelope(message.data());
-  // 按主业务标识选路由：加业务就在这里加一个分支
-  if (envelope->domain() == Domain_Mewindow && m_windowRouter.Handle(*envelope)) {
+  IpcHandler* handler = FindIpcHandler(envelope->domain());
+  if (handler == nullptr) {
+    liveutils::LogWarn(kComponent, "no handler for domain " +
+                                       std::string(EnumNameDomain(envelope->domain())));
     return;
   }
-  liveutils::LogWarn(kComponent, "unsupported message: domain=" +
-                                     std::to_string(envelope->domain()));
+  if (!handler->OnMessage(*envelope)) {
+    liveutils::LogWarn(kComponent, "unhandled message: domain=" +
+                                       std::string(EnumNameDomain(envelope->domain())));
+  }
 }
 
 void MeApplicationPrivate::OnClientDisconnected() {
   // Electron 是唯一客户端：管道断了说明它不在了，engine 没有存在的意义
   m_window.Close();
+}
+
+bool MeApplicationPrivate::RegisterIpcHandler(IpcHandler* handler) {
+  if (handler == nullptr || handler->domain() == Domain_None) {
+    liveutils::LogWarn(kComponent, "RegisterIpcHandler: invalid handler");
+    return false;
+  }
+  const Domain domain = handler->domain();
+  std::lock_guard<std::mutex> lock(m_handlersMutex);
+  if (!m_handlers.emplace(domain, handler).second) {
+    liveutils::LogWarn(kComponent, "RegisterIpcHandler: domain " +
+                                       std::string(EnumNameDomain(domain)) +
+                                       " already registered");
+    return false;
+  }
+  return true;
+}
+
+bool MeApplicationPrivate::UnregisterIpcHandler(Domain domain) {
+  std::lock_guard<std::mutex> lock(m_handlersMutex);
+  return m_handlers.erase(domain) > 0;
+}
+
+IpcHandler* MeApplicationPrivate::FindIpcHandler(Domain domain) {
+  std::lock_guard<std::mutex> lock(m_handlersMutex);
+  const auto it = m_handlers.find(domain);
+  return it != m_handlers.end() ? it->second : nullptr;
 }
 
 bool MeApplicationPrivate::Exec() {
@@ -161,4 +196,8 @@ bool MeApplicationPrivate::Exec() {
 
   liveutils::LogInfo(kComponent, "media engine stopped");
   return true;
+}
+
+MeWindow* MeApplicationPrivate::window() {
+  return &m_window;
 }

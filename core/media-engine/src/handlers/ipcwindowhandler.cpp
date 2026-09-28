@@ -1,5 +1,6 @@
-#include "window_router.h"
+#include "ipcwindowhandler.h"
 
+#include "application.h"
 #include "mewindow.h"
 #include "utils/log.h"
 
@@ -9,13 +10,12 @@ const char kComponent[] = "window";
 
 }  // namespace
 
-WindowRouter::WindowRouter(MeWindow* window) : m_window(window) {}
+Domain IpcWindowHandler::domain() const {
+  return Domain_Mewindow;
+}
 
-bool WindowRouter::Handle(const Envelope& envelope) {
-  MeWindow* window = m_window;
-  if (window == nullptr) {
-    return false;
-  }
+bool IpcWindowHandler::OnMessage(const Envelope& envelope) {
+  MeWindow* window = meApp->window();
   switch (envelope.mewindow_type()) {
     case MewindowPayload_AttachWindow: {
       const auto* body = envelope.mewindow_as_AttachWindow();

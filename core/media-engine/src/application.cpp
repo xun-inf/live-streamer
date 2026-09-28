@@ -20,3 +20,15 @@ MeApplication::~MeApplication() {
 bool MeApplication::Exec() {
   return d_ptr->Exec();
 }
+
+MeWindow* MeApplication::window() {
+  return d_ptr->window();
+}
+
+bool MeApplication::RegisterIpcHandler(IpcHandler* handler) {
+  return d_ptr->RegisterIpcHandler(handler);
+}
+
+bool MeApplication::UnregisterIpcHandler(Domain domain) {
+  return d_ptr->UnregisterIpcHandler(domain);
+}
