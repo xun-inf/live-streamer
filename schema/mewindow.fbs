@@ -1,0 +1,32 @@
+// mewindow：本地窗口（四层窗口模式的第 3 层）的业务表和本域消息清单。
+//
+// 传输：Named Pipe 字节流，每条消息 = 4 字节小端长度前缀 + FlatBuffer 字节
+// 方向：Electron Main（Client） -> media-engine（Server），当前全是单向消息
+// 汇总：总表 Envelope 和主业务标识 Domain 在 main.fbs；本文件的新消息只加下面的 union，
+//       main.fbs 不用动
+// 生成：flatc --cpp 给 core/common，--ts 给 electron/src/common（scripts/schema.py）
+
+// Main -> Engine：把 engine 自己建的本地窗口认父到 Electron 主窗口
+// parent_hwnd 是消费端主窗口的 HWND；show 控制认父后是否立刻显示
+table AttachWindow {
+  parent_hwnd: ulong;
+  show: bool;
+}
+
+// Main -> Engine：本地窗口的矩形，父窗口客户区坐标系下的物理像素
+table SetWindowRect {
+  x: int;
+  y: int;
+  width: int;
+  height: int;
+}
+
+// Main -> Engine：从父窗口上摘下来（隐藏并还给进程内的宿主窗口）
+table DetachWindow {}
+
+// 窗口域的消息清单：只放本域的表
+union MewindowPayload {
+  AttachWindow = 1,
+  SetWindowRect = 2,
+  DetachWindow = 3,
+}

@@ -1,0 +1,7 @@
+# Windows 批处理必须用 CRLF：cmd.exe 遇到 LF 换行会解析错乱（命令被连成一行，报一堆
+# "is not recognized"）。显式钉死，免得编辑器和工具把它改回 LF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# shell 脚本反过来必须是 LF：带 \r 的脚本在 Linux/macOS 上跑不起来
+*.sh text eol=lf

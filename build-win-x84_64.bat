@@ -1,5 +1,5 @@
 @echo off
-rem bigolive-streamer: one-click build for Windows x64.
+rem live-streamer: one-click build for Windows x64.
 rem Builds the C++ core (build/core) and the Electron app, same as:
 rem     python scripts\build.py [--config Debug^|Release]
 setlocal

@@ -16,9 +16,19 @@ public:
     IpcServerPrivate(const IpcServerPrivate&) = delete;
     IpcServerPrivate& operator=(const IpcServerPrivate&) = delete;
 
+    // 必须在 Start 之前设置
+    void SetMessageCallback(MessageCallback callback) {
+      m_callback = std::move(callback);
+    }
+
+    // 必须在 Start 之前设置
+    void SetDisconnectCallback(DisconnectCallback callback) {
+      m_disconnectCallback = std::move(callback);
+    }
+
     bool connected() const;
 
-    bool Start(const std::string& pipe_name);
+    bool Start(const std::string& pipeName);
     void Stop();
 
     // 线程安全：由内部线程调用，内部串行化
@@ -30,15 +40,15 @@ private:
   void ReadLoop(HANDLE pipe);
   void ClosePipe(HANDLE pipe);
 
-  std::string pipe_name_;
-  HANDLE pipe_ = INVALID_HANDLE_VALUE;
-  HANDLE stop_event_ = nullptr;
-  HANDLE read_event_ = nullptr;
-  HANDLE write_event_ = nullptr;
-  std::thread thread_;
-  std::atomic<bool> running_{false};
-  std::atomic<bool> connected_{false};
-  std::mutex send_mutex_;
-  MessageCallback callback_;
-  DisconnectCallback disconnect_callback_;
+  std::string m_pipeName;
+  HANDLE m_pipe = INVALID_HANDLE_VALUE;
+  HANDLE m_stopEvent = nullptr;
+  HANDLE m_readEvent = nullptr;
+  HANDLE m_writeEvent = nullptr;
+  std::thread m_thread;
+  std::atomic<bool> m_running{false};
+  std::atomic<bool> m_connected{false};
+  std::mutex m_sendMutex;
+  MessageCallback m_callback;
+  DisconnectCallback m_disconnectCallback;
 };

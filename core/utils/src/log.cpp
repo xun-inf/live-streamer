@@ -67,4 +67,4 @@ void Log(LogLevel level, const std::string& component,
   }
 }
 
-}  // namespace bigolive
+}

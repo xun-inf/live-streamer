@@ -71,4 +71,4 @@ std::string LastErrorMessage(unsigned long error_code) {
   return message;
 }
 
-}  // namespace bigolive
+}

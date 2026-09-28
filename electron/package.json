@@ -1,8 +1,8 @@
 {
-  "name": "bigolive-streamer-electron",
+  "name": "live-streamer-electron",
   "version": "1.0.0",
   "private": true,
-  "description": "bigolive-streamer Electron 外壳：Named Pipe 客户端 + Renderer UI",
+  "description": "live-streamer Electron 外壳：Named Pipe 客户端 + Renderer UI",
   "type": "module",
   "main": "dist/main/main.js",
   "scripts": {

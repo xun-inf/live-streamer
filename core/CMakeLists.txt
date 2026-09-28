@@ -2,13 +2,18 @@ cmake_minimum_required(VERSION 3.25)
 
 project(live-streamer VERSION 1.0.0 LANGUAGES CXX)
 
+# Windows 资源编译（.rc -> PE 资源，media-engine 的图标走这里）
+if(WIN32)
+  enable_language(RC)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 get_filename_component(LIVESTREAMER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
-# 第三方预编译库统一放 core/thirdparty（版本与来源见各自目录下的 README.md）
-set(LIVESTREAMER_THIRDPARTY_DIR ${LIVESTREAMER_ROOT}/thirdparty)
+# 第三方预编译库/头文件统一放 core/thirdparty（flatc、flatbuffers 头文件、rcedit 都由脚本自动下载，不入库）
+set(LIVESTREAMER_THIRDPARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
 
 # 只作用于本项目自己的 target，不影响 FetchContent 拉进来的第三方工程
 add_library(livestreamer_options INTERFACE)
@@ -25,7 +30,10 @@ add_subdirectory(media-engine)
 get_filename_component(LIVESTREAMER_OUTPUT_DIR "${LIVESTREAMER_ROOT}/build/out" ABSOLUTE)
 
 foreach(target liveStreamer mediaEngine)
-  set_target_properties(${target} PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${LIVESTREAMER_OUTPUT_DIR}
-    PDB_OUTPUT_DIRECTORY ${LIVESTREAMER_OUTPUT_DIR})
+  # liveStreamer（宿主）尚未创建，先跳过，等目标就位后自动生效
+  if(TARGET ${target})
+    set_target_properties(${target} PROPERTIES
+      RUNTIME_OUTPUT_DIRECTORY ${LIVESTREAMER_OUTPUT_DIR}
+      PDB_OUTPUT_DIRECTORY ${LIVESTREAMER_OUTPUT_DIR})
+  endif()
 endforeach()

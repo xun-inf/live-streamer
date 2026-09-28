@@ -1,6 +1,5 @@
 #include "ipcserver.h"
-#include "./ipc/ipcserver_p.h"
-#include <winuser.h>
+#include "./privates/ipcserver_p.h"
 
 // IpcServer implementation
 IpcServer::IpcServer()
@@ -26,8 +25,8 @@ bool IpcServer::connected() const {
     return d_ptr->connected();
 }
 
-bool IpcServer::Start(const std::string& pipe_name) {
-    return d_ptr->Start(pipe_name);
+bool IpcServer::Start(const std::string& pipeName) {
+    return d_ptr->Start(pipeName);
 }
 
 void IpcServer::Stop() {

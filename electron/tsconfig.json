@@ -12,5 +12,5 @@
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true
   },
-  "include": ["src/main/**/*.ts", "src/generated/**/*.ts"]
+  "include": ["src/main/**/*.ts", "src/common/**/*.ts"]
 }

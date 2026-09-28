@@ -4,8 +4,12 @@ electron/dist/
 electron/node_modules/
 node_modules/
 
-# flatc 生成的协议代码（由 core/ipc 的 schema_gen 生成）
-electron/src/generated/
+# flatc 工具（scripts/schema.py 自动下载，不入库）
+core/thirdparty/flatc/
+# flatbuffers C++ 头文件（scripts/schema.py 自动下载，不入库）
+core/thirdparty/flatbuffers/
+# rcedit 工具（scripts/build.py 自动下载，不入库）
+core/thirdparty/rcedit/
 
 # 运行期产物
 logs/
@@ -19,3 +23,5 @@ __pycache__/
 .vs/
 .vscode/
 *.user
+
+tests/

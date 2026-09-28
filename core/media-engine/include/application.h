@@ -14,10 +14,14 @@ public:
   MeApplication(const MeApplication&) = delete;
   MeApplication& operator=(const MeApplication&) = delete;
 
-  static MeApplication* instance();
+  static MeApplication* Instance() {
+    return MeApplication::s_instance;
+  }
 
-  bool exec();
+  bool Exec();
 
 private:
   static MeApplication* s_instance;
 };
+
+#define meApp MeApplication::Instance()

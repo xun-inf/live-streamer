@@ -32,7 +32,7 @@ public:
 
     bool connected() const;
 
-    bool Start(const std::string& pipe_name);
+    bool Start(const std::string& pipeName);
     void Stop();
 
     // 线程安全：由内部线程调用，内部串行化

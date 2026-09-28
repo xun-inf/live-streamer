@@ -1,4 +1,4 @@
-# bigolive-utils：日志 / ini 配置 / scopeExit / 字符串工具，两个 exe 都直接链它
+# live-utils：日志 / ini 配置 / scopeExit / 字符串工具，两个 exe 都直接链它
 add_library(liveUtils STATIC
   src/log.cpp
   src/string_util.cpp)

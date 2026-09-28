@@ -1,6 +1,7 @@
 #include "ipcserver_p.h"
 
 #include "utils/log.h"
+#include "utils/string_util.h"
 
 const char kComponent[] = "ipc";
 constexpr DWORD kPipeBufferSize = 64 * 1024;
@@ -10,100 +11,214 @@ inline constexpr size_t kLengthPrefixSize = 4;
 inline constexpr uint32_t kMaxFrameSize = 8 * 1024 * 1024;
 
 // 读写都会循环到满足长度为止：pipe 的一次 ReadFile 可能只返回一部分。
-// handle 必须以 FILE_FLAG_OVERLAPPED 打开；abort_event 触发时放弃本次 I/O，
+// handle 必须以 FILE_FLAG_OVERLAPPED 打开；abortEvent 触发时放弃本次 I/O，
 // 传 nullptr 表示不可中断。
-bool ReadFrame(HANDLE handle, HANDLE io_event, HANDLE abort_event,
+bool ReadFrame(HANDLE handle, HANDLE ioEvent, HANDLE abortEvent,
                std::vector<uint8_t>* out);
-bool WriteFrame(HANDLE handle, HANDLE io_event, HANDLE abort_event,
+bool WriteFrame(HANDLE handle, HANDLE ioEvent, HANDLE abortEvent,
                 const uint8_t* data, size_t size);
+
+namespace {
+
+// 等待一次重叠 I/O 完成；abortEvent 触发时取消本次 I/O 并返回 false。
+bool WaitForIo(HANDLE handle, OVERLAPPED* overlapped, HANDLE ioEvent,
+               HANDLE abortEvent, DWORD* bytes) {
+  const HANDLE events[2] = {ioEvent, abortEvent};
+  const DWORD count = abortEvent == nullptr ? 1u : 2u;
+  const DWORD wait = ::WaitForMultipleObjects(count, events, FALSE, INFINITE);
+  if (wait != WAIT_OBJECT_0) {
+    ::CancelIoEx(handle, overlapped);
+    DWORD ignored = 0;
+    ::GetOverlappedResult(handle, overlapped, &ignored, TRUE);
+    return false;
+  }
+  return ::GetOverlappedResult(handle, overlapped, bytes, FALSE) != FALSE;
+}
+
+// 读满 size 字节；读到 0 字节（对端关闭）按失败处理。
+bool ReadExact(HANDLE handle, HANDLE ioEvent, HANDLE abortEvent, void* out,
+               size_t size) {
+  auto* cursor = static_cast<uint8_t*>(out);
+  size_t remaining = size;
+  while (remaining > 0) {
+    const DWORD chunk =
+        static_cast<DWORD>(remaining > MAXDWORD ? MAXDWORD : remaining);
+    OVERLAPPED overlapped{};
+    overlapped.hEvent = ioEvent;
+    ::ResetEvent(ioEvent);
+    DWORD bytes = 0;
+    if (!::ReadFile(handle, cursor, chunk, &bytes, &overlapped)) {
+      const DWORD error = ::GetLastError();
+      if (error != ERROR_IO_PENDING) {
+        return false;
+      }
+      if (!WaitForIo(handle, &overlapped, ioEvent, abortEvent, &bytes)) {
+        return false;
+      }
+    }
+    if (bytes == 0) {
+      return false;
+    }
+    cursor += bytes;
+    remaining -= bytes;
+  }
+  return true;
+}
+
+// 写满 size 字节。
+bool WriteExact(HANDLE handle, HANDLE ioEvent, HANDLE abortEvent,
+                const uint8_t* data, size_t size) {
+  const uint8_t* cursor = data;
+  size_t remaining = size;
+  while (remaining > 0) {
+    const DWORD chunk =
+        static_cast<DWORD>(remaining > MAXDWORD ? MAXDWORD : remaining);
+    OVERLAPPED overlapped{};
+    overlapped.hEvent = ioEvent;
+    ::ResetEvent(ioEvent);
+    DWORD bytes = 0;
+    if (!::WriteFile(handle, cursor, chunk, &bytes, &overlapped)) {
+      const DWORD error = ::GetLastError();
+      if (error != ERROR_IO_PENDING) {
+        return false;
+      }
+      if (!WaitForIo(handle, &overlapped, ioEvent, abortEvent, &bytes)) {
+        return false;
+      }
+    }
+    if (bytes == 0) {
+      return false;
+    }
+    cursor += bytes;
+    remaining -= bytes;
+  }
+  return true;
+}
+
+}  // namespace
+
+bool WriteFrame(HANDLE handle, HANDLE ioEvent, HANDLE abortEvent,
+                const uint8_t* data, size_t size) {
+  if (size > kMaxFrameSize) {
+    return false;
+  }
+  const uint32_t frameSize = static_cast<uint32_t>(size);
+  uint8_t prefix[kLengthPrefixSize] = {};
+  prefix[0] = static_cast<uint8_t>(frameSize & 0xFF);
+  prefix[1] = static_cast<uint8_t>((frameSize >> 8) & 0xFF);
+  prefix[2] = static_cast<uint8_t>((frameSize >> 16) & 0xFF);
+  prefix[3] = static_cast<uint8_t>((frameSize >> 24) & 0xFF);
+  return WriteExact(handle, ioEvent, abortEvent, prefix, sizeof(prefix)) &&
+         WriteExact(handle, ioEvent, abortEvent, data, size);
+}
+
+bool ReadFrame(HANDLE handle, HANDLE ioEvent, HANDLE abortEvent,
+               std::vector<uint8_t>* out) {
+  uint8_t prefix[kLengthPrefixSize] = {};
+  if (!ReadExact(handle, ioEvent, abortEvent, prefix, sizeof(prefix))) {
+    return false;
+  }
+  const uint32_t size = static_cast<uint32_t>(prefix[0]) |
+                        (static_cast<uint32_t>(prefix[1]) << 8) |
+                        (static_cast<uint32_t>(prefix[2]) << 16) |
+                        (static_cast<uint32_t>(prefix[3]) << 24);
+  if (size > kMaxFrameSize) {
+    liveutils::LogError(kComponent, "frame too large: " + std::to_string(size));
+    return false;
+  }
+  out->resize(size);
+  return ReadExact(handle, ioEvent, abortEvent, out->data(), size);
+}
 
 IpcServerPrivate::~IpcServerPrivate() { 
     Stop(); 
 }
 
-bool IpcServerPrivate::Start(const std::string& pipe_name) {
-  if (running_.load()) {
+bool IpcServerPrivate::Start(const std::string& pipeName) {
+  if (m_running.load()) {
     return false;
   }
-  pipe_name_ = pipe_name;
-  stop_event_ = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);
-  read_event_ = ::CreateEventA(nullptr, FALSE, FALSE, nullptr);
-  write_event_ = ::CreateEventA(nullptr, FALSE, FALSE, nullptr);
-  if (stop_event_ == nullptr || read_event_ == nullptr ||
-      write_event_ == nullptr) {
+  m_pipeName = pipeName;
+  m_stopEvent = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);
+  m_readEvent = ::CreateEventA(nullptr, FALSE, FALSE, nullptr);
+  m_writeEvent = ::CreateEventA(nullptr, FALSE, FALSE, nullptr);
+  if (m_stopEvent == nullptr || m_readEvent == nullptr ||
+      m_writeEvent == nullptr) {
     Stop();
     return false;
   }
-  running_.store(true);
-  thread_ = std::thread(&IpcServer::AcceptLoop, this);
-  LogInfo(kComponent, "pipe server started: " + pipe_name);
+  m_running.store(true);
+  m_thread = std::thread(&IpcServerPrivate::AcceptLoop, this);
+  liveutils::LogInfo(kComponent, "pipe server started: " + pipeName);
   
   return true;
 }
 
 void IpcServerPrivate::Stop() {
-  if (running_.exchange(false)) {
-    if (stop_event_ != nullptr) {
-      ::SetEvent(stop_event_);
+  if (m_running.exchange(false)) {
+    if (m_stopEvent != nullptr) {
+      ::SetEvent(m_stopEvent);
     }
-    if (thread_.joinable()) {
-      thread_.join();
+    if (m_thread.joinable()) {
+      m_thread.join();
     }
   }
   // 线程已退出，不会再有人使用这些句柄
-  if (stop_event_ != nullptr) {
-    ::CloseHandle(stop_event_);
-    stop_event_ = nullptr;
+  if (m_stopEvent != nullptr) {
+    ::CloseHandle(m_stopEvent);
+    m_stopEvent = nullptr;
   }
-  if (read_event_ != nullptr) {
-    ::CloseHandle(read_event_);
-    read_event_ = nullptr;
+  if (m_readEvent != nullptr) {
+    ::CloseHandle(m_readEvent);
+    m_readEvent = nullptr;
   }
-  if (write_event_ != nullptr) {
-    ::CloseHandle(write_event_);
-    write_event_ = nullptr;
+  if (m_writeEvent != nullptr) {
+    ::CloseHandle(m_writeEvent);
+    m_writeEvent = nullptr;
   }
-  std::lock_guard<std::mutex> lock(send_mutex_);
-  pipe_ = INVALID_HANDLE_VALUE;  // 已由 AcceptLoop 关闭
-  connected_.store(false);
+  std::lock_guard<std::mutex> lock(m_sendMutex);
+  m_pipe = INVALID_HANDLE_VALUE;  // 已由 AcceptLoop 关闭
+  m_connected.store(false);
 }
 
 void IpcServerPrivate::AcceptLoop() {
-  while (running_.load()) {
+  while (m_running.load()) {
     const HANDLE pipe = ::CreateNamedPipeA(
-        pipe_name_.c_str(), PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+        m_pipeName.c_str(), PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, kPipeBufferSize,
         kPipeBufferSize, 0, nullptr);
     if (pipe == INVALID_HANDLE_VALUE) {
-      LogError(kComponent,
-               "CreateNamedPipe failed: " + LastErrorMessage(::GetLastError()));
+      liveutils::LogError(
+          kComponent,
+          "CreateNamedPipe failed: " +
+              liveutils::LastErrorMessage(::GetLastError()));
       break;
     }
     {
-      std::lock_guard<std::mutex> lock(send_mutex_);
-      pipe_ = pipe;
+      std::lock_guard<std::mutex> lock(m_sendMutex);
+      m_pipe = pipe;
     }
     if (!ConnectClient(pipe)) {
       ClosePipe(pipe);
       continue;
     }
-    connected_.store(true);
-    LogInfo(kComponent, "client connected");
+    m_connected.store(true);
+    liveutils::LogInfo(kComponent, "client connected");
     ReadLoop(pipe);
-    connected_.store(false);
-    LogInfo(kComponent, "client disconnected");
-    if (disconnect_callback_) {
-      disconnect_callback_();
+    m_connected.store(false);
+    liveutils::LogInfo(kComponent, "client disconnected");
+    if (m_disconnectCallback) {
+      m_disconnectCallback();
     }
     ClosePipe(pipe);
   }
-  LogInfo(kComponent, "pipe server loop exited");
+  liveutils::LogInfo(kComponent, "pipe server loop exited");
 }
 
 bool IpcServerPrivate::ConnectClient(HANDLE pipe) {
   OVERLAPPED overlapped{};
-  overlapped.hEvent = read_event_;
-  ::ResetEvent(read_event_);
+  overlapped.hEvent = m_readEvent;
+  ::ResetEvent(m_readEvent);
   if (::ConnectNamedPipe(pipe, &overlapped)) {
     return true;
   }
@@ -112,11 +227,12 @@ bool IpcServerPrivate::ConnectClient(HANDLE pipe) {
     return true;
   }
   if (error != ERROR_IO_PENDING) {
-    LogError(kComponent,
-             "ConnectNamedPipe failed: " + LastErrorMessage(error));
+    liveutils::LogError(
+        kComponent,
+        "ConnectNamedPipe failed: " + liveutils::LastErrorMessage(error));
     return false;
   }
-  const HANDLE handles[2] = {read_event_, stop_event_};
+  const HANDLE handles[2] = {m_readEvent, m_stopEvent};
   const DWORD wait = ::WaitForMultipleObjects(2, handles, FALSE, INFINITE);
   if (wait != WAIT_OBJECT_0) {
     ::CancelIoEx(pipe, &overlapped);
@@ -129,35 +245,40 @@ bool IpcServerPrivate::ConnectClient(HANDLE pipe) {
 }
 
 void IpcServerPrivate::ReadLoop(HANDLE pipe) {
-  while (running_.load()) {
+  while (m_running.load()) {
     std::vector<uint8_t> frame;
-    if (!ReadFrame(pipe, read_event_, stop_event_, &frame)) {
+    if (!ReadFrame(pipe, m_readEvent, m_stopEvent, &frame)) {
       break;
     }
-    if (callback_) {
-      callback_(std::move(frame));
+    if (m_callback) {
+      m_callback(std::move(frame));
     }
   }
 }
 
 bool IpcServerPrivate::Send(const std::vector<uint8_t>& message) {
-  std::lock_guard<std::mutex> lock(send_mutex_);
-  if (pipe_ == INVALID_HANDLE_VALUE || !connected_.load()) {
+  std::lock_guard<std::mutex> lock(m_sendMutex);
+  if (m_pipe == INVALID_HANDLE_VALUE || !m_connected.load()) {
     return false;
   }
-  if (!WriteFrame(pipe_, write_event_, stop_event_, message.data(),
+  if (!WriteFrame(m_pipe, m_writeEvent, m_stopEvent, message.data(),
                   message.size())) {
-    LogWarn(kComponent,
-            "send failed, " + std::to_string(message.size()) + " bytes");
+    liveutils::LogWarn(kComponent, "send failed, " +
+                                       std::to_string(message.size()) +
+                                       " bytes");
     return false;
   }
   return true;
 }
 
 void IpcServerPrivate::ClosePipe(HANDLE pipe) {
-  std::lock_guard<std::mutex> lock(send_mutex_);
-  if (pipe_ == pipe) {
-    pipe_ = INVALID_HANDLE_VALUE;
+  std::lock_guard<std::mutex> lock(m_sendMutex);
+  if (m_pipe == pipe) {
+    m_pipe = INVALID_HANDLE_VALUE;
   }
   ::CloseHandle(pipe);
+}
+
+bool IpcServerPrivate::connected() const {
+  return m_connected.load();
 }
