@@ -106,8 +106,16 @@
         </section>
 
         <section class="preview">
+          <!-- 验证多窗口：两个并列区域，各对应 engine 侧一个本地窗口（id 1 / 2） -->
           <div class="video-frame">
-            <div class="video-host" id="video-host">
+            <div class="video-host" id="video-host-1" data-window-id="1">
+              <svg class="stage-logo" viewBox="0 0 120 160" aria-hidden="true">
+                <ellipse cx="60" cy="80" rx="33" ry="50" fill="none" stroke="#ffffff" stroke-width="5" />
+                <path d="M44 48c26 14 26 50 0 64" fill="none" stroke="#ffffff" stroke-width="5" />
+                <path d="M76 48c-26 14-26 50 0 64" fill="none" stroke="#ffffff" stroke-width="5" />
+              </svg>
+            </div>
+            <div class="video-host" id="video-host-2" data-window-id="2">
               <svg class="stage-logo" viewBox="0 0 120 160" aria-hidden="true">
                 <ellipse cx="60" cy="80" rx="33" ry="50" fill="none" stroke="#ffffff" stroke-width="5" />
                 <path d="M44 48c26 14 26 50 0 64" fill="none" stroke="#ffffff" stroke-width="5" />

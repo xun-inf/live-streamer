@@ -22,8 +22,17 @@ static getSizePrefixedRootAsDetachWindow(bb:flatbuffers.ByteBuffer, obj?:DetachW
   return (obj || new DetachWindow()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
+id():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
 static startDetachWindow(builder:flatbuffers.Builder) {
-  builder.startObject(0);
+  builder.startObject(1);
+}
+
+static addId(builder:flatbuffers.Builder, id:number) {
+  builder.addFieldInt32(0, id, 0);
 }
 
 static endDetachWindow(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -31,8 +40,9 @@ static endDetachWindow(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
-static createDetachWindow(builder:flatbuffers.Builder):flatbuffers.Offset {
+static createDetachWindow(builder:flatbuffers.Builder, id:number):flatbuffers.Offset {
   DetachWindow.startDetachWindow(builder);
+  DetachWindow.addId(builder, id);
   return DetachWindow.endDetachWindow(builder);
 }
 }

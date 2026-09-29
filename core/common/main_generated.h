@@ -13,22 +13,22 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
               FLATBUFFERS_VERSION_REVISION == 23,
              "Non-compatible flatbuffers version included");
 
-#include "mewindow_generated.h"
+#include "ntwindow_generated.h"
 
 struct Envelope;
 struct EnvelopeBuilder;
 
 enum Domain : int8_t {
   Domain_None = 0,
-  Domain_Mewindow = 1,
+  Domain_Ntwindow = 1,
   Domain_MIN = Domain_None,
-  Domain_MAX = Domain_Mewindow
+  Domain_MAX = Domain_Ntwindow
 };
 
 inline const Domain (&EnumValuesDomain())[2] {
   static const Domain values[] = {
     Domain_None,
-    Domain_Mewindow
+    Domain_Ntwindow
   };
   return values;
 }
@@ -36,14 +36,14 @@ inline const Domain (&EnumValuesDomain())[2] {
 inline const char * const *EnumNamesDomain() {
   static const char * const names[3] = {
     "None",
-    "Mewindow",
+    "Ntwindow",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameDomain(Domain e) {
-  if (::flatbuffers::IsOutRange(e, Domain_None, Domain_Mewindow)) return "";
+  if (::flatbuffers::IsOutRange(e, Domain_None, Domain_Ntwindow)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesDomain()[index];
 }
@@ -52,48 +52,48 @@ struct Envelope FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef EnvelopeBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DOMAIN = 4,
-    VT_MEWINDOW_TYPE = 6,
-    VT_MEWINDOW = 8
+    VT_NTWINDOW_TYPE = 6,
+    VT_NTWINDOW = 8
   };
   Domain domain() const {
     return static_cast<Domain>(GetField<int8_t>(VT_DOMAIN, 0));
   }
-  MewindowPayload mewindow_type() const {
-    return static_cast<MewindowPayload>(GetField<uint8_t>(VT_MEWINDOW_TYPE, 0));
+  NtwindowPayload ntwindow_type() const {
+    return static_cast<NtwindowPayload>(GetField<uint8_t>(VT_NTWINDOW_TYPE, 0));
   }
-  const void *mewindow() const {
-    return GetPointer<const void *>(VT_MEWINDOW);
+  const void *ntwindow() const {
+    return GetPointer<const void *>(VT_NTWINDOW);
   }
-  template<typename T> const T *mewindow_as() const;
-  const AttachWindow *mewindow_as_AttachWindow() const {
-    return mewindow_type() == MewindowPayload_AttachWindow ? static_cast<const AttachWindow *>(mewindow()) : nullptr;
+  template<typename T> const T *ntwindow_as() const;
+  const AttachWindow *ntwindow_as_AttachWindow() const {
+    return ntwindow_type() == NtwindowPayload_AttachWindow ? static_cast<const AttachWindow *>(ntwindow()) : nullptr;
   }
-  const SetWindowRect *mewindow_as_SetWindowRect() const {
-    return mewindow_type() == MewindowPayload_SetWindowRect ? static_cast<const SetWindowRect *>(mewindow()) : nullptr;
+  const SetWindowRect *ntwindow_as_SetWindowRect() const {
+    return ntwindow_type() == NtwindowPayload_SetWindowRect ? static_cast<const SetWindowRect *>(ntwindow()) : nullptr;
   }
-  const DetachWindow *mewindow_as_DetachWindow() const {
-    return mewindow_type() == MewindowPayload_DetachWindow ? static_cast<const DetachWindow *>(mewindow()) : nullptr;
+  const DetachWindow *ntwindow_as_DetachWindow() const {
+    return ntwindow_type() == NtwindowPayload_DetachWindow ? static_cast<const DetachWindow *>(ntwindow()) : nullptr;
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int8_t>(verifier, VT_DOMAIN, 1) &&
-           VerifyField<uint8_t>(verifier, VT_MEWINDOW_TYPE, 1) &&
-           VerifyOffset(verifier, VT_MEWINDOW) &&
-           VerifyMewindowPayload(verifier, mewindow(), mewindow_type()) &&
+           VerifyField<uint8_t>(verifier, VT_NTWINDOW_TYPE, 1) &&
+           VerifyOffset(verifier, VT_NTWINDOW) &&
+           VerifyNtwindowPayload(verifier, ntwindow(), ntwindow_type()) &&
            verifier.EndTable();
   }
 };
 
-template<> inline const AttachWindow *Envelope::mewindow_as<AttachWindow>() const {
-  return mewindow_as_AttachWindow();
+template<> inline const AttachWindow *Envelope::ntwindow_as<AttachWindow>() const {
+  return ntwindow_as_AttachWindow();
 }
 
-template<> inline const SetWindowRect *Envelope::mewindow_as<SetWindowRect>() const {
-  return mewindow_as_SetWindowRect();
+template<> inline const SetWindowRect *Envelope::ntwindow_as<SetWindowRect>() const {
+  return ntwindow_as_SetWindowRect();
 }
 
-template<> inline const DetachWindow *Envelope::mewindow_as<DetachWindow>() const {
-  return mewindow_as_DetachWindow();
+template<> inline const DetachWindow *Envelope::ntwindow_as<DetachWindow>() const {
+  return ntwindow_as_DetachWindow();
 }
 
 struct EnvelopeBuilder {
@@ -103,11 +103,11 @@ struct EnvelopeBuilder {
   void add_domain(Domain domain) {
     fbb_.AddElement<int8_t>(Envelope::VT_DOMAIN, static_cast<int8_t>(domain), 0);
   }
-  void add_mewindow_type(MewindowPayload mewindow_type) {
-    fbb_.AddElement<uint8_t>(Envelope::VT_MEWINDOW_TYPE, static_cast<uint8_t>(mewindow_type), 0);
+  void add_ntwindow_type(NtwindowPayload ntwindow_type) {
+    fbb_.AddElement<uint8_t>(Envelope::VT_NTWINDOW_TYPE, static_cast<uint8_t>(ntwindow_type), 0);
   }
-  void add_mewindow(::flatbuffers::Offset<void> mewindow) {
-    fbb_.AddOffset(Envelope::VT_MEWINDOW, mewindow);
+  void add_ntwindow(::flatbuffers::Offset<void> ntwindow) {
+    fbb_.AddOffset(Envelope::VT_NTWINDOW, ntwindow);
   }
   explicit EnvelopeBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -123,11 +123,11 @@ struct EnvelopeBuilder {
 inline ::flatbuffers::Offset<Envelope> CreateEnvelope(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     Domain domain = Domain_None,
-    MewindowPayload mewindow_type = MewindowPayload_NONE,
-    ::flatbuffers::Offset<void> mewindow = 0) {
+    NtwindowPayload ntwindow_type = NtwindowPayload_NONE,
+    ::flatbuffers::Offset<void> ntwindow = 0) {
   EnvelopeBuilder builder_(_fbb);
-  builder_.add_mewindow(mewindow);
-  builder_.add_mewindow_type(mewindow_type);
+  builder_.add_ntwindow(ntwindow);
+  builder_.add_ntwindow_type(ntwindow_type);
   builder_.add_domain(domain);
   return builder_.Finish();
 }

@@ -1,5 +1,5 @@
 #include "ipcserver.h"
-#include "./privates/ipcserver_p.h"
+#include "ipcserver_p.h"
 
 // IpcServer implementation
 IpcServer::IpcServer()
@@ -12,13 +12,12 @@ IpcServer::~IpcServer() {
 }
 
 // 必须在 Start 之前设置
-void IpcServer::SetMessageCallback(MessageCallback callback) {
-    d_ptr->SetMessageCallback(callback);
-}
-
-// 必须在 Start 之前设置
 void IpcServer::SetDisconnectCallback(DisconnectCallback callback) {
     d_ptr->SetDisconnectCallback(callback);
+}
+
+bool IpcServer::Register(std::shared_ptr<IpcHandler> handler) {
+    return d_ptr->Register(handler);
 }
 
 bool IpcServer::connected() const {

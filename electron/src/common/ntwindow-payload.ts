@@ -7,18 +7,18 @@ import { DetachWindow } from './detach-window.js';
 import { SetWindowRect } from './set-window-rect.js';
 
 
-export enum MewindowPayload {
+export enum NtwindowPayload {
   NONE = 0,
   AttachWindow = 1,
   SetWindowRect = 2,
   DetachWindow = 3
 }
 
-export function unionToMewindowPayload(
-  type: MewindowPayload,
+export function unionToNtwindowPayload(
+  type: NtwindowPayload,
   accessor: (obj:AttachWindow|DetachWindow|SetWindowRect) => AttachWindow|DetachWindow|SetWindowRect|null
 ): AttachWindow|DetachWindow|SetWindowRect|null {
-  switch(MewindowPayload[type]) {
+  switch(NtwindowPayload[type]) {
     case 'NONE': return null; 
     case 'AttachWindow': return accessor(new AttachWindow())! as AttachWindow;
     case 'SetWindowRect': return accessor(new SetWindowRect())! as SetWindowRect;
@@ -27,12 +27,12 @@ export function unionToMewindowPayload(
   }
 }
 
-export function unionListToMewindowPayload(
-  type: MewindowPayload, 
+export function unionListToNtwindowPayload(
+  type: NtwindowPayload, 
   accessor: (index: number, obj:AttachWindow|DetachWindow|SetWindowRect) => AttachWindow|DetachWindow|SetWindowRect|null, 
   index: number
 ): AttachWindow|DetachWindow|SetWindowRect|null {
-  switch(MewindowPayload[type]) {
+  switch(NtwindowPayload[type]) {
     case 'NONE': return null; 
     case 'AttachWindow': return accessor(index, new AttachWindow())! as AttachWindow;
     case 'SetWindowRect': return accessor(index, new SetWindowRect())! as SetWindowRect;

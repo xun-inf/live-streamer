@@ -4,5 +4,5 @@
 
 export { AttachWindow } from './attach-window.js';
 export { DetachWindow } from './detach-window.js';
-export { MewindowPayload } from './mewindow-payload.js';
+export { NtwindowPayload } from './ntwindow-payload.js';
 export { SetWindowRect } from './set-window-rect.js';

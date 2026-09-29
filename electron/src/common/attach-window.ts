@@ -32,8 +32,13 @@ show():boolean {
   return offset ? !!this.bb!.readInt8(this.bb_pos + offset) : false;
 }
 
+id():number {
+  const offset = this.bb!.__offset(this.bb_pos, 8);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
 static startAttachWindow(builder:flatbuffers.Builder) {
-  builder.startObject(2);
+  builder.startObject(3);
 }
 
 static addParentHwnd(builder:flatbuffers.Builder, parentHwnd:bigint) {
@@ -44,15 +49,20 @@ static addShow(builder:flatbuffers.Builder, show:boolean) {
   builder.addFieldInt8(1, +show, +false);
 }
 
+static addId(builder:flatbuffers.Builder, id:number) {
+  builder.addFieldInt32(2, id, 0);
+}
+
 static endAttachWindow(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createAttachWindow(builder:flatbuffers.Builder, parentHwnd:bigint, show:boolean):flatbuffers.Offset {
+static createAttachWindow(builder:flatbuffers.Builder, parentHwnd:bigint, show:boolean, id:number):flatbuffers.Offset {
   AttachWindow.startAttachWindow(builder);
   AttachWindow.addParentHwnd(builder, parentHwnd);
   AttachWindow.addShow(builder, show);
+  AttachWindow.addId(builder, id);
   return AttachWindow.endAttachWindow(builder);
 }
 }

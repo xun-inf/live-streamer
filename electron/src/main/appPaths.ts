@@ -37,8 +37,8 @@ export function resolvePaths(): AppPaths {
     uiLogPath,
     engineLogPath:
       argValue('engine-log') ||
-      path.join(path.dirname(uiLogPath), 'media-engine.log'),
-    engineExe: argValue('engine') || path.join(appDir, 'media-engine.exe'),
+      path.join(path.dirname(uiLogPath), 'media-service.log'),
+    engineExe: argValue('engine') || path.join(appDir, 'media-service.exe'),
     // Phase 1 不引入随机 token，多实例留到后面
     pipeName:
       argValue('pipe-name') ||

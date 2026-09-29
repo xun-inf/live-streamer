@@ -1,4 +1,4 @@
-// Electron 主进程：入口。拉起 media-engine 子进程 -> 连它的 Named Pipe ->
+// Electron 主进程：入口。拉起 media-service 子进程 -> 连它的 Named Pipe ->
 // 把主窗口 HWND 交给 engine 认父（四层窗口模式的第 3 层：本地窗口挂在主窗口下），
 // 页面量出来的矩形（物理像素、父窗口客户区坐标系）驱动子窗口摆位。
 import { app, BrowserWindow, ipcMain } from 'electron';
@@ -32,8 +32,10 @@ function log(message: string): void {
   }
 }
 
-// 页面量出来的画面区域：x/y/width/height 是 CSS px（相对视口），dpr 用来换算物理像素
+// 页面量出来的画面区域：x/y/width/height 是 CSS px（相对视口），dpr 用来换算物理像素；
+// id 是 engine 侧的窗口 id：0 = 主窗口，其余按 id 建/找附加窗口
 interface ViewRect {
+  id: number;
   x: number;
   y: number;
   width: number;
@@ -44,12 +46,15 @@ interface ViewRect {
 const bridge = new WindowBridge();
 const engineProcess = new EngineProcess(log, onEngineExit);
 
+// 页面里量两个并列区域，对应 engine 侧的 1、2 号附加窗口（0 是主窗口，留着）
+const VIEW_WINDOW_IDS = [1, 2];
+
 let mainWindow: BrowserWindow | null = null;
 let shuttingDown = false;
 let rendererAlive = false;
 let engineStarted = false;
-let viewAttached = false;
-let lastRectKey = '';
+const attachedIds = new Set<number>();
+const lastRectKeys = new Map<number, string>();
 let status = { connected: false, message: '连接中…' };
 
 // 渲染进程不在（崩了 / 正在重载）时 webContents.send 会抛，必须吞掉
@@ -82,13 +87,13 @@ function delay(ms: number): Promise<void> {
 
 // engine 没了：主进程还活着，把状态摆成断开；页面重载时会重新拉起它
 function onEngineExit(code: number | null, signal: string | null): void {
-  viewAttached = false;
+  attachedIds.clear();
   engineStarted = false;
   bridge.close();
   if (!shuttingDown) {
     setStatus(
       false,
-      'media-engine 已退出: code=' + String(code) + ', signal=' + String(signal ?? ''),
+      'media-service 已退出: code=' + String(code) + ', signal=' + String(signal ?? ''),
     );
   }
 }
@@ -97,7 +102,7 @@ function onPipeClosed(reason: string): void {
   setStatus(false, '已断开: ' + reason);
 }
 
-// media-engine 可能比 Electron 晚一点创建 pipe，这里重试到超时为止
+// media-service 可能比 Electron 晚一点创建 pipe，这里重试到超时为止
 async function connectWithRetry(): Promise<void> {
   const deadline = Date.now() + 10000;
   let lastError = '';
@@ -110,7 +115,7 @@ async function connectWithRetry(): Promise<void> {
       await delay(200);
     }
   }
-  throw new Error('连接 media-engine 失败: ' + lastError);
+  throw new Error('连接 media-service 失败: ' + lastError);
 }
 
 // Electron 主窗口的 HWND：Windows 下 getNativeWindowHandle 给的就是窗口句柄。
@@ -129,29 +134,32 @@ function applyWindowRect(rect: ViewRect): void {
   const y = Math.round(rect.y * dpr);
   const width = Math.round(rect.width * dpr);
   const height = Math.round(rect.height * dpr);
-  if (!bridge.setWindowRect(x, y, width, height)) {
+  if (!bridge.setWindowRect(rect.id, x, y, width, height)) {
     return;
   }
   const key = x + ',' + y + ',' + width + ',' + height;
-  if (key !== lastRectKey) {
-    lastRectKey = key;
-    log('window rect: ' + key);
+  if (key !== lastRectKeys.get(rect.id)) {
+    lastRectKeys.set(rect.id, key);
+    log('window ' + rect.id + ' rect: ' + key);
   }
 }
 
-// 第 3 层：把 engine 自己建的本地窗口认父到本进程的主窗口上
-async function attachWindow(): Promise<void> {
+// 第 3 层：把 engine 自己建的本地窗口认父到本进程的主窗口上（逐个窗口 id）
+async function attachWindows(): Promise<void> {
   const target = mainWindow;
   if (target === null || target.isDestroyed()) {
     return;
   }
   const hwnd = windowHandleOf(target);
-  if (!bridge.attachWindow(hwnd, true)) {
-    log('attachWindow 发送失败: pipe 未连接');
-    return;
+  attachedIds.clear();
+  for (const id of VIEW_WINDOW_IDS) {
+    if (!bridge.attachWindow(id, hwnd, true)) {
+      log('attachWindow 发送失败: pipe 未连接 (id=' + id + ')');
+      return;
+    }
+    attachedIds.add(id);
+    log('attachWindow 已发送: id=' + id + ' main hwnd=0x' + hwnd.toString(16));
   }
-  viewAttached = true;
-  log('attachWindow 已发送: main hwnd=0x' + hwnd.toString(16));
   sendToRenderer('video:measure');
 }
 
@@ -274,7 +282,7 @@ async function onRendererReady(): Promise<void> {
         parentPid: process.pid,
       })
     ) {
-      setStatus(false, 'media-engine 启动失败: ' + paths.engineExe);
+      setStatus(false, 'media-service 启动失败: ' + paths.engineExe);
       return;
     }
     try {
@@ -284,12 +292,12 @@ async function onRendererReady(): Promise<void> {
       return;
     }
     setStatus(true, '已连接');
-    await attachWindow();
+    await attachWindows();
     return;
   }
   // 页面重载：pipe 还在主进程里，重新认父 + 让页面重新量一次矩形
   if (bridge.connected) {
-    await attachWindow();
+    await attachWindows();
   }
 }
 
@@ -314,6 +322,7 @@ function registerHandlers(): void {
     }
     const value = rect as Partial<ViewRect>;
     if (
+      typeof value.id !== 'number' ||
       typeof value.x !== 'number' ||
       typeof value.y !== 'number' ||
       typeof value.width !== 'number' ||
@@ -323,6 +332,7 @@ function registerHandlers(): void {
       return;
     }
     applyWindowRect({
+      id: value.id,
       x: value.x,
       y: value.y,
       width: value.width,
@@ -331,12 +341,15 @@ function registerHandlers(): void {
     });
   });
   ipcMain.handle('video:attach', async () => {
-    await attachWindow();
-    return viewAttached;
+    await attachWindows();
+    return attachedIds.size === VIEW_WINDOW_IDS.length;
   });
   ipcMain.handle('video:detach', () => {
-    const sent = bridge.detachWindow();
-    viewAttached = false;
+    let sent = true;
+    for (const id of VIEW_WINDOW_IDS) {
+      sent = bridge.detachWindow(id) && sent;
+    }
+    attachedIds.clear();
     log('view detached: ' + String(sent));
     return sent;
   });

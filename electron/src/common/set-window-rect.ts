@@ -42,8 +42,13 @@ height():number {
   return offset ? this.bb!.readInt32(this.bb_pos + offset) : 0;
 }
 
+id():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
 static startSetWindowRect(builder:flatbuffers.Builder) {
-  builder.startObject(4);
+  builder.startObject(5);
 }
 
 static addX(builder:flatbuffers.Builder, x:number) {
@@ -62,17 +67,22 @@ static addHeight(builder:flatbuffers.Builder, height:number) {
   builder.addFieldInt32(3, height, 0);
 }
 
+static addId(builder:flatbuffers.Builder, id:number) {
+  builder.addFieldInt32(4, id, 0);
+}
+
 static endSetWindowRect(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createSetWindowRect(builder:flatbuffers.Builder, x:number, y:number, width:number, height:number):flatbuffers.Offset {
+static createSetWindowRect(builder:flatbuffers.Builder, x:number, y:number, width:number, height:number, id:number):flatbuffers.Offset {
   SetWindowRect.startSetWindowRect(builder);
   SetWindowRect.addX(builder, x);
   SetWindowRect.addY(builder, y);
   SetWindowRect.addWidth(builder, width);
   SetWindowRect.addHeight(builder, height);
+  SetWindowRect.addId(builder, id);
   return SetWindowRect.endSetWindowRect(builder);
 }
 }

@@ -150,7 +150,7 @@ def output_dir(config: str) -> Path:
 
     单配置生成器（Ninja）没有 config 这一层，直接落在 build/out。
     """
-    return target_binary("media-engine", config).parent
+    return target_binary("media-service", config).parent
 
 
 
@@ -276,7 +276,7 @@ def stage(config: str) -> Path:
 
     产物目录（build/out/<config>）就是可分发目录，不再另建一份 dist：
         build/out/<config>/
-        ├── media-engine.exe         # CMake 直接构建在这里（PE 图标带 config/app.ico）
+        ├── media-service.exe        # CMake 直接构建在这里（PE 图标带 config/app.ico）
         ├── live-streamer.exe + Chromium 运行时文件  # electron.exe 改的名，摊在根下（rcedit 换过图标/版本）
         ├── <config/bin 里的东西>     # settings.ini 等直接摊在根下，不留 bin/ 这一层
         ├── resources/               # Electron 自己的目录，只放它自己的东西
@@ -287,7 +287,7 @@ def stage(config: str) -> Path:
     config/ 本身不进产物：图标是构建期输入（.rc / rcedit 用），只有 bin/ 是运行时文件。
     启动：live-streamer.exe resources/app（见 scripts/run.py 的 run_out）
     """
-    binary = target_binary("media-engine", config)
+    binary = target_binary("media-service", config)
     if not binary.exists():
         raise SystemExit("[build] 缺少构建产物: {0}".format(binary))
     target = binary.parent

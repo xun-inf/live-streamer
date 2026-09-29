@@ -7,7 +7,7 @@ import { AttachWindow } from '../common/attach-window.js';
 import { DetachWindow } from '../common/detach-window.js';
 import { Domain } from '../common/domain.js';
 import { Envelope } from '../common/envelope.js';
-import { MewindowPayload } from '../common/mewindow-payload.js';
+import { NtwindowPayload } from '../common/ntwindow-payload.js';
 import { SetWindowRect } from '../common/set-window-rect.js';
 import { IpcClient } from './ipcClient.js';
 
@@ -29,31 +29,32 @@ export class WindowBridge {
     return this.client.connected;
   }
 
-  // parentHwnd 是 Electron 主窗口的 HWND；engine 认父后按最近的矩形摆位
-  attachWindow(parentHwnd: bigint, show: boolean): boolean {
+  // parentHwnd 是 Electron 主窗口的 HWND；engine 认父后按最近的矩形摆位。
+  // id 是 engine 侧的窗口 id：0 = 主窗口，其余按 id 建/找附加窗口
+  attachWindow(id: number, parentHwnd: bigint, show: boolean): boolean {
     return this.send(
-      MewindowPayload.AttachWindow,
-      (builder) => AttachWindow.createAttachWindow(builder, parentHwnd, show),
+      NtwindowPayload.AttachWindow,
+      (builder) => AttachWindow.createAttachWindow(builder, parentHwnd, show, id),
     );
   }
 
   // 矩形是父窗口客户区坐标系下的物理像素（页面量出来的 CSS px 乘 dpr 再取整）
-  setWindowRect(x: number, y: number, width: number, height: number): boolean {
+  setWindowRect(id: number, x: number, y: number, width: number, height: number): boolean {
     return this.send(
-      MewindowPayload.SetWindowRect,
-      (builder) => SetWindowRect.createSetWindowRect(builder, x, y, width, height),
+      NtwindowPayload.SetWindowRect,
+      (builder) => SetWindowRect.createSetWindowRect(builder, x, y, width, height, id),
     );
   }
 
-  detachWindow(): boolean {
+  detachWindow(id: number): boolean {
     return this.send(
-      MewindowPayload.DetachWindow,
-      (builder) => DetachWindow.createDetachWindow(builder),
+      NtwindowPayload.DetachWindow,
+      (builder) => DetachWindow.createDetachWindow(builder, id),
     );
   }
 
-  // 所有消息都走窗口域（Domain.Mewindow）；以后有别的业务再加自己的 send 包装
-  private send(type: MewindowPayload, build: BodyBuilder): boolean {
+  // 所有消息都走窗口域（Domain.Ntwindow）；以后有别的业务再加自己的 send 包装
+  private send(type: NtwindowPayload, build: BodyBuilder): boolean {
     if (!this.client.connected) {
       return false;
     }
@@ -61,7 +62,7 @@ export class WindowBridge {
     const body = build(builder);
     const envelope = Envelope.createEnvelope(
       builder,
-      Domain.Mewindow,
+      Domain.Ntwindow,
       type,
       body,
     );

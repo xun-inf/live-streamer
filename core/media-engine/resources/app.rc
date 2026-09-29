@@ -1,5 +1,0 @@
-// media-engine 的 Windows PE 资源。
-// 路径相对本文件解析：core/media-engine/resources/ -> 仓库根/config/
-
-// 应用图标：资源管理器 / 任务栏 / 窗口默认图标
-IDI_APP_ICON ICON "../../../config/app.ico"

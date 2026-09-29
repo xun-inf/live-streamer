@@ -1,5 +1,6 @@
 #include "ipcserver_p.h"
 
+#include "main_generated.h"
 #include "utils/log.h"
 #include "utils/string_util.h"
 
@@ -250,9 +251,7 @@ void IpcServerPrivate::ReadLoop(HANDLE pipe) {
     if (!ReadFrame(pipe, m_readEvent, m_stopEvent, &frame)) {
       break;
     }
-    if (m_callback) {
-      m_callback(std::move(frame));
-    }
+    Dispatch(std::move(frame));
   }
 }
 
@@ -281,4 +280,48 @@ void IpcServerPrivate::ClosePipe(HANDLE pipe) {
 
 bool IpcServerPrivate::connected() const {
   return m_connected.load();
+}
+
+bool IpcServerPrivate::Register(std::shared_ptr<IpcHandler> handler) {
+  if (!handler || handler->domain() == Domain_None) {
+    liveutils::LogWarn(kComponent, "Register: invalid handler");
+    return false;
+  }
+  const Domain domain = handler->domain();
+  std::lock_guard<std::mutex> lock(m_handlersMutex);
+  if (!m_handlers.emplace(domain, handler).second) {
+    liveutils::LogWarn(kComponent, "Register: domain " +
+                                       std::string(EnumNameDomain(domain)) +
+                                       " already registered");
+    return false;
+  }
+  return true;
+}
+
+IpcHandler* IpcServerPrivate::FindHandler(Domain domain) const {
+  std::lock_guard<std::mutex> lock(m_handlersMutex);
+  const auto it = m_handlers.find(domain);
+  return it != m_handlers.end() ? (it->second).get() : nullptr;
+}
+
+// 消息是"4 字节长度前缀 + FlatBuffer"，前缀由 ReadFrame 剥掉，这里只认 Envelope；
+// 校验完按 Domain 找注册的 handler 分发：加业务只要注册新的 handler，这里不用动
+void IpcServerPrivate::Dispatch(std::vector<uint8_t> message) {
+  flatbuffers::Verifier verifier(message.data(), message.size());
+  if (!VerifyEnvelopeBuffer(verifier)) {
+    liveutils::LogError(kComponent, "invalid message, " +
+                                       std::to_string(message.size()) + " bytes");
+    return;
+  }
+  const auto* envelope = GetEnvelope(message.data());
+  IpcHandler* handler = FindHandler(envelope->domain());
+  if (handler == nullptr) {
+    liveutils::LogWarn(kComponent, "no handler for domain " +
+                                       std::string(EnumNameDomain(envelope->domain())));
+    return;
+  }
+  if (!handler->OnIpcMessage(*envelope)) {
+    liveutils::LogWarn(kComponent, "unhandled message: domain=" +
+                                       std::string(EnumNameDomain(envelope->domain())));
+  }
 }

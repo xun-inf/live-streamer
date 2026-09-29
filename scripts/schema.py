@@ -10,7 +10,7 @@
 win/sh 包装（仓库根目录，双击可用）：schema-win-x84_64.bat / schema-linux-x86_64.sh
 
 输出：
-    core/common/            <schema>_generated.h   （C++，供 media-engine 用）
+    core/common/            <schema>_generated.h   （C++，供 media-service 用）
     electron/src/common/    <schema>.ts            （TS，import 'flatbuffers' 运行时）
 
 flatc 版本与 electron/package.json 里的 flatbuffers 依赖保持一致（25.9.23），

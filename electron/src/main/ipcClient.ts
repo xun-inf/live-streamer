@@ -1,4 +1,4 @@
-// Named Pipe 客户端：收发格式与 core/media-engine 的 ipcserver_p.cpp 一致。
+// Named Pipe 客户端：收发格式与 core/media-service 的 ipcserver_p.cpp 一致。
 // [uint32 小端长度前缀][FlatBuffer 字节]，读写都必须循环到满：
 // pipe 的一次 read 只保证返回"一部分"数据，不能假设一次拿到整帧。
 

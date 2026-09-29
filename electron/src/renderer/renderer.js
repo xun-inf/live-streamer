@@ -7,7 +7,6 @@ const api = window.meApi;
 const ui = {
   version: document.getElementById('app-version'),
   connDot: document.getElementById('conn-dot'),
-  videoHost: document.getElementById('video-host'),
   roomTitle: document.getElementById('room-title'),
   btnMinimize: document.getElementById('btn-minimize'),
   btnMaximize: document.getElementById('btn-maximize'),
@@ -39,25 +38,36 @@ function setConnected(connected, message) {
 
 /* ---------------- 本地窗口矩形 ---------------- */
 
-function measureVideoHost() {
-  const rect = ui.videoHost.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) {
-    return;
+// 页面量出来的区域 -> 本地窗口：一个区域一个窗口 id（0 是主窗口，这里用 1、2 验证并列窗口）
+const videoWindows = Array.from(document.querySelectorAll('[data-window-id]'), (element) => ({
+  id: Number(element.dataset.windowId),
+  element,
+}));
+
+function measureVideoWindows() {
+  for (const entry of videoWindows) {
+    const rect = entry.element.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      continue;
+    }
+    api.sendViewRect({
+      id: entry.id,
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      height: rect.height,
+      dpr: window.devicePixelRatio || 1,
+    });
   }
-  api.sendViewRect({
-    x: rect.left,
-    y: rect.top,
-    width: rect.width,
-    height: rect.height,
-    dpr: window.devicePixelRatio || 1,
-  });
 }
 
 // 窗口 move / resize 这类事件只有主进程知道：它让我们重新量一次
-api.onMeasureRequest(() => measureVideoHost());
-window.addEventListener('resize', measureVideoHost);
-document.addEventListener('scroll', measureVideoHost, true);
-new ResizeObserver(measureVideoHost).observe(ui.videoHost);
+api.onMeasureRequest(() => measureVideoWindows());
+window.addEventListener('resize', measureVideoWindows);
+document.addEventListener('scroll', measureVideoWindows, true);
+for (const entry of videoWindows) {
+  new ResizeObserver(measureVideoWindows).observe(entry.element);
+}
 
 /* ---------------- 自绘标题栏 ---------------- */
 
@@ -77,7 +87,7 @@ ui.btnClose.addEventListener('click', () => api.closeWindow());
 api.onMaximized((maximized) => {
   ui.btnMaximize.innerHTML = maximized ? ICON_RESTORE : ICON_MAXIMIZE;
   ui.btnMaximize.title = maximized ? '还原' : '最大化';
-  measureVideoHost();
+  measureVideoWindows();
 });
 
 /* ---------------- 可编辑标题 ---------------- */
@@ -154,4 +164,4 @@ api.onStatus((current) => {
   setConnected(current.connected, current.message);
 });
 
-requestAnimationFrame(() => measureVideoHost());
+requestAnimationFrame(() => measureVideoWindows());

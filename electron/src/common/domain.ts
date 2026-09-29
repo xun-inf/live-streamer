@@ -4,5 +4,5 @@
 
 export enum Domain {
   None = 0,
-  Mewindow = 1
+  Ntwindow = 1
 }

@@ -6,10 +6,8 @@
 #include <memory>
 #include <functional>
 
+class IpcHandler;
 class IpcServerPrivate;
-
-// 消息回调运行在 IPC 线程上：实现里只做入队，不要阻塞
-using MessageCallback = std::function<void(std::vector<uint8_t>)>;
 
 // 客户端断开回调（IPC 线程上调用）：实现里只置标志，别做重活
 using DisconnectCallback = std::function<void()>;
@@ -25,12 +23,14 @@ public:
     IpcServer& operator=(const IpcServer&) = delete;
 
     // 必须在 Start 之前设置
-    void SetMessageCallback(MessageCallback callback);
-
-    // 必须在 Start 之前设置
     void SetDisconnectCallback(DisconnectCallback callback);
 
     bool connected() const;
+
+    // 注册/反注册 IPC 消息处理器：按 handler->domain() 索引，一个域只能注册一个。
+    // 注册后该域的消息会在 IPC 线程上转给 handler->OnIpcMessage()。
+    // 线程安全；handler 由调用方持有，反注册之后再销毁
+    bool Register(std::shared_ptr<IpcHandler> handler);
 
     bool Start(const std::string& pipeName);
     void Stop();

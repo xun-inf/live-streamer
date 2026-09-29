@@ -5,7 +5,7 @@
 import * as flatbuffers from 'flatbuffers';
 
 import { Domain } from './domain.js';
-import { MewindowPayload, unionToMewindowPayload, unionListToMewindowPayload } from './mewindow-payload.js';
+import { NtwindowPayload, unionToNtwindowPayload, unionListToNtwindowPayload } from './ntwindow-payload.js';
 
 
 export class Envelope {
@@ -31,12 +31,12 @@ domain():Domain {
   return offset ? this.bb!.readInt8(this.bb_pos + offset) : Domain.None;
 }
 
-mewindowType():MewindowPayload {
+ntwindowType():NtwindowPayload {
   const offset = this.bb!.__offset(this.bb_pos, 6);
-  return offset ? this.bb!.readUint8(this.bb_pos + offset) : MewindowPayload.NONE;
+  return offset ? this.bb!.readUint8(this.bb_pos + offset) : NtwindowPayload.NONE;
 }
 
-mewindow<T extends flatbuffers.Table>(obj:any):any|null {
+ntwindow<T extends flatbuffers.Table>(obj:any):any|null {
   const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
 }
@@ -49,12 +49,12 @@ static addDomain(builder:flatbuffers.Builder, domain:Domain) {
   builder.addFieldInt8(0, domain, Domain.None);
 }
 
-static addMewindowType(builder:flatbuffers.Builder, mewindowType:MewindowPayload) {
-  builder.addFieldInt8(1, mewindowType, MewindowPayload.NONE);
+static addNtwindowType(builder:flatbuffers.Builder, ntwindowType:NtwindowPayload) {
+  builder.addFieldInt8(1, ntwindowType, NtwindowPayload.NONE);
 }
 
-static addMewindow(builder:flatbuffers.Builder, mewindowOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, mewindowOffset, 0);
+static addNtwindow(builder:flatbuffers.Builder, ntwindowOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(2, ntwindowOffset, 0);
 }
 
 static endEnvelope(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -70,11 +70,11 @@ static finishSizePrefixedEnvelopeBuffer(builder:flatbuffers.Builder, offset:flat
   builder.finish(offset, undefined, true);
 }
 
-static createEnvelope(builder:flatbuffers.Builder, domain:Domain, mewindowType:MewindowPayload, mewindowOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createEnvelope(builder:flatbuffers.Builder, domain:Domain, ntwindowType:NtwindowPayload, ntwindowOffset:flatbuffers.Offset):flatbuffers.Offset {
   Envelope.startEnvelope(builder);
   Envelope.addDomain(builder, domain);
-  Envelope.addMewindowType(builder, mewindowType);
-  Envelope.addMewindow(builder, mewindowOffset);
+  Envelope.addNtwindowType(builder, ntwindowType);
+  Envelope.addNtwindow(builder, ntwindowOffset);
   return Envelope.endEnvelope(builder);
 }
 }

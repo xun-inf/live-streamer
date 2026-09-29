@@ -1,4 +1,4 @@
-// media-engine 的进程管理：主进程是入口，engine 是它的子进程。
+// media-service 的进程管理：主进程是入口，engine 是它的子进程。
 // 正常退出由我们主动收；我们被强杀时靠 engine 自己的 --parent-pid 兜底。
 
 import { spawn, type ChildProcess } from 'node:child_process';
@@ -45,7 +45,7 @@ export class EngineProcess {
       return true;
     }
     if (!fs.existsSync(options.exePath)) {
-      this.onLog('找不到 media-engine: ' + options.exePath);
+      this.onLog('找不到 media-service: ' + options.exePath);
       return false;
     }
     this.stopping = false;
@@ -73,7 +73,7 @@ export class EngineProcess {
         this.child = null;
       }
       this.onLog(
-        'media-engine ' +
+        'media-service ' +
           what +
           ': code=' +
           String(code) +
@@ -86,13 +86,13 @@ export class EngineProcess {
       }
     };
     child.on('error', (error) => {
-      this.onLog('media-engine 进程出错: ' + String(error));
+      this.onLog('media-service 进程出错: ' + String(error));
       report('启动失败', -1, null);
     });
     child.on('exit', (code, signal) => report('退出', code, signal));
     this.child = child;
     this.onLog(
-      'media-engine 已启动: pid=' + String(child.pid) + ', exe=' + options.exePath,
+      'media-service 已启动: pid=' + String(child.pid) + ', exe=' + options.exePath,
     );
     return true;
   }
@@ -112,7 +112,7 @@ export class EngineProcess {
       }
       child.once('exit', () => resolve());
     });
-    // 管道断开后 engine 会自己收（见媒体引擎的 OnClientDisconnected），先给它一点时间
+    // 管道断开后 engine 会自己收（见 media-service 的 OnClientDisconnected），先给它一点时间
     const natural = await Promise.race([
       exited.then(() => true),
       delay(kNaturalExitWaitMs).then(() => false),
@@ -120,14 +120,14 @@ export class EngineProcess {
     if (natural) {
       return;
     }
-    this.onLog('media-engine 没自己退，强杀');
+    this.onLog('media-service 没自己退，强杀');
     child.kill();
     const timedOut = await Promise.race([
       exited.then(() => false),
       delay(kExitWaitMs).then(() => true),
     ]);
     if (timedOut) {
-      this.onLog('media-engine 强杀后仍没退出');
+      this.onLog('media-service 强杀后仍没退出');
       child.kill();
     }
   }

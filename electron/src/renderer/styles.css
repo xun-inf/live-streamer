@@ -421,18 +421,22 @@ button {
   border-radius: 10px;
 }
 
-/* 画面区域：本地窗口（第 3 层）就摆在这块 DOM 的位置上，认父后由它盖住 */
+/* 画面区域：本地窗口（第 3 层）就摆在这块 DOM 的位置上，认父后由它盖住。
+   验证多窗口：两个并列区域（每块各一个本地窗口），中间留 4px 缝看边界 */
 .video-frame {
   height: 100%;
-  aspect-ratio: 9 / 16;
+  aspect-ratio: 9 / 8;
   max-width: 100%;
+  display: flex;
+  gap: 4px;
   overflow: hidden;
   border-radius: 8px;
   background: #16233f;
 }
 
 .video-host {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 100%;
   display: grid;
   place-items: center;

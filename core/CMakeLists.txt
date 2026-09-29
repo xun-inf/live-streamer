@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(live-streamer VERSION 1.0.0 LANGUAGES CXX)
 
-# Windows 资源编译（.rc -> PE 资源，media-engine 的图标走这里）
+# Windows 资源编译（.rc -> PE 资源，media-service 的图标走这里）
 if(WIN32)
   enable_language(RC)
 endif()
@@ -23,13 +23,13 @@ if (MSVC)
 endif()
 
 add_subdirectory(utils)
-add_subdirectory(media-engine)
+add_subdirectory(media-service)
 
 # 统一输出目录：可执行文件都落到仓库根的 build/out/<Config>（多配置生成器自动追加配置名，
 # 单配置生成器如 Ninja 则直接是 build/out）。静态库和中间产物留在各自的 build/core 子目录里。
 get_filename_component(LIVESTREAMER_OUTPUT_DIR "${LIVESTREAMER_ROOT}/build/out" ABSOLUTE)
 
-foreach(target liveStreamer mediaEngine)
+foreach(target liveStreamer mediaService)
   # liveStreamer（宿主）尚未创建，先跳过，等目标就位后自动生效
   if(TARGET ${target})
     set_target_properties(${target} PROPERTIES
