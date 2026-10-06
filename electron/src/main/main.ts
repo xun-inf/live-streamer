@@ -178,7 +178,7 @@ function createWindow(): void {
     minHeight: 600,
     frame: false,
     show: false,
-    title: 'BIGO LIVE Streamer',
+    title: 'LIVE Streamer',
     backgroundColor: '#0f141a',
     icon: hasIcon ? iconPath : undefined,
     webPreferences: {

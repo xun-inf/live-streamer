@@ -1,6 +1,22 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(live-streamer VERSION 1.0.0 LANGUAGES CXX)
+option(LIVESTREAMER_SCHEMA_ONLY "Configure only the schema generation target" OFF)
+if(LIVESTREAMER_SCHEMA_ONLY)
+  project(live-streamer VERSION 1.0.0 LANGUAGES NONE)
+else()
+  project(live-streamer VERSION 1.0.0 LANGUAGES CXX)
+endif()
+
+get_filename_component(LIVESTREAMER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(FlatBuffers)
+
+if(LIVESTREAMER_SCHEMA_ONLY)
+  include(Schemas)
+  return()
+endif()
+
+livestreamer_add_flatbuffers_headers()
 
 # Windows 资源编译（.rc -> PE 资源，media-service 的图标走这里）
 if(WIN32)
@@ -10,10 +26,6 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-get_filename_component(LIVESTREAMER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
-# 第三方预编译库/头文件统一放 core/thirdparty（flatc、flatbuffers 头文件、rcedit 都由脚本自动下载，不入库）
-set(LIVESTREAMER_THIRDPARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
 
 # 只作用于本项目自己的 target，不影响 FetchContent 拉进来的第三方工程
 add_library(livestreamer_options INTERFACE)

@@ -4,9 +4,8 @@ electron/dist/
 electron/node_modules/
 node_modules/
 
-# flatc 工具（scripts/schema.py 自动下载，不入库）
+# 可选的本地 FlatBuffers 覆盖（默认由 CMake 下载到 build/）
 core/thirdparty/flatc/
-# flatbuffers C++ 头文件（scripts/schema.py 自动下载，不入库）
 core/thirdparty/flatbuffers/
 # rcedit 工具（scripts/build.py 自动下载，不入库）
 core/thirdparty/rcedit/

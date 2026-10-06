@@ -21,8 +21,13 @@ target_include_directories(mediaService PRIVATE
   # 内部头文件（ipc/、view/ 等）按 src 根包含：include 侧写 "ipc/xxx.h"
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   # flatc 生成的协议代码（scripts/schema.py -> core/common）
-  ${CMAKE_CURRENT_SOURCE_DIR}/../common
-  # flatbuffers C++ 头文件（scripts/schema.py 铺到 core/thirdparty）
-  ${LIVESTREAMER_THIRDPARTY_DIR}/flatbuffers/include)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common)
 
-target_link_libraries(mediaService PRIVATE livestreamer_options liveUtils user32 gdi32 d3d11 dxgi)
+target_link_libraries(mediaService PRIVATE
+  livestreamer_options
+  FlatBuffers::Headers
+  liveUtils
+  user32
+  gdi32
+  d3d11
+  dxgi)

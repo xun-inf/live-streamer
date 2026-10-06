@@ -44,8 +44,8 @@ RCEDIT_SHA256 = "3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2
 RCEDIT_DIR = ROOT / "core" / "thirdparty" / "rcedit"
 
 # 写进 exe 资源的产品名（窗口标题见 electron/src/main/main.ts）
-APP_PRODUCT_NAME = "BIGO LIVE Streamer"
-APP_COMPANY_NAME = "BIGO"
+APP_PRODUCT_NAME = "LIVE Streamer"
+APP_COMPANY_NAME = "ZXB"
 
 IS_WINDOWS = os.name == "nt"
 
