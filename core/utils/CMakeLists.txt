@@ -5,4 +5,6 @@ add_library(liveUtils STATIC
 
 set_target_properties(liveUtils PROPERTIES OUTPUT_NAME "live-utils")
 target_include_directories(liveUtils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(liveUtils PUBLIC livestreamer_options)
+target_link_libraries(liveUtils
+  PUBLIC livestreamer_options
+  PRIVATE spdlog::spdlog)

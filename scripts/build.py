@@ -26,7 +26,7 @@ BUILD_DIR = ROOT / "build" / "core"
 ELECTRON_DIR = ROOT / "electron"
 # 随程序一起发出去的配置目录：图标（app.ico / tray.ico）和 bin 资源
 CONFIG_DIR = ROOT / "config"
-OUT_DIR = ROOT / "build" / "out"
+BIN_DIR = ROOT / "build" / "bin"
 
 # 产物里的 UI 进程名：Electron 运行时本体改叫 live-streamer（electron-packager 同款做法），
 # 进程名 / 任务栏 / 文件都和产品对得上；开发模式仍用 node_modules 里的 electron.exe
@@ -93,10 +93,14 @@ def executable_name(name: str) -> str:
     return name + ".exe" if IS_WINDOWS else name
 
 
-def build_native(config: str) -> None:
+def build_native(config: str, generator: str = "", toolset: str = "") -> None:
     configure = ["cmake", "-S", CORE_DIR, "-B", BUILD_DIR]
+    if generator:
+        configure += ["-G", generator]
     if IS_WINDOWS:
         configure += ["-A", "x64"]
+    if toolset:
+        configure += ["-T", toolset]
     run_command(configure)
     run_command(["cmake", "--build", BUILD_DIR, "--config", config, "--parallel"])
     log("原生侧构建完成（config {0}）".format(config))
@@ -133,8 +137,8 @@ def prepare_electron() -> None:
 
 
 def target_binary(name: str, config: str) -> Path:
-    """CMake 产物统一在 build/out/<config>（单配置生成器没有 config 这一层）。"""
-    folder = OUT_DIR
+    """CMake 产物统一在 build/bin/<config>（单配置生成器没有 config 这一层）。"""
+    folder = BIN_DIR
     candidates = [
         folder / config / executable_name(name),
         folder / executable_name(name),
@@ -146,9 +150,9 @@ def target_binary(name: str, config: str) -> Path:
 
 
 def output_dir(config: str) -> Path:
-    """产物目录 = CMake 的输出目录，也是最终的可分发目录：build/out/<config>。
+    """产物目录 = CMake 的输出目录，也是最终的可分发目录：build/bin/<config>。
 
-    单配置生成器（Ninja）没有 config 这一层，直接落在 build/out。
+    单配置生成器（Ninja）没有 config 这一层，直接落在 build/bin。
     """
     return target_binary("media-service", config).parent
 
@@ -274,8 +278,8 @@ def brand_ui_exe(target: Path) -> None:
 def stage(config: str) -> Path:
     """把 Electron 运行时 + Electron 应用 + config/bin 铺进 CMake 的输出目录。
 
-    产物目录（build/out/<config>）就是可分发目录，不再另建一份 dist：
-        build/out/<config>/
+    产物目录（build/bin/<config>）就是最终的可分发目录：
+        build/bin/<config>/
         ├── media-service.exe        # CMake 直接构建在这里（PE 图标带 config/app.ico）
         ├── live-streamer.exe + Chromium 运行时文件  # electron.exe 改的名，摊在根下（rcedit 换过图标/版本）
         ├── <config/bin 里的东西>     # settings.ini 等直接摊在根下，不留 bin/ 这一层
@@ -285,7 +289,7 @@ def stage(config: str) -> Path:
         └── logs/                    # 首次运行时自动创建
 
     config/ 本身不进产物：图标是构建期输入（.rc / rcedit 用），只有 bin/ 是运行时文件。
-    启动：live-streamer.exe resources/app（见 scripts/run.py 的 run_out）
+    启动：live-streamer.exe resources/app
     """
     binary = target_binary("media-service", config)
     if not binary.exists():
@@ -331,8 +335,13 @@ def stage(config: str) -> Path:
     return target
 
 
-def build_all(config: str, stage_output: bool = True) -> None:
-    build_native(config)
+def build_all(
+    config: str,
+    stage_output: bool = True,
+    generator: str = "",
+    toolset: str = "",
+) -> None:
+    build_native(config, generator, toolset)
     prepare_electron()
     if stage_output:
         stage(config)
@@ -342,10 +351,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="live-streamer 构建脚本")
     parser.add_argument("--config", default="Debug", help="Debug / Release")
     parser.add_argument(
-        "--no-stage", action="store_true", help="只构建，不铺 build/out/<config> 目录"
+        "--generator", default="", help="CMake generator，例如 Visual Studio 18 2026"
+    )
+    parser.add_argument("--toolset", default="", help="CMake toolset，例如 v145")
+    parser.add_argument(
+        "--no-stage", action="store_true", help="只构建，不铺 build/bin/<config> 目录"
     )
     args = parser.parse_args()
-    build_all(args.config, stage_output=not args.no_stage)
+    build_all(
+        args.config,
+        stage_output=not args.no_stage,
+        generator=args.generator,
+        toolset=args.toolset,
+    )
     return 0
 
 

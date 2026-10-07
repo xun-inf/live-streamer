@@ -6,7 +6,7 @@ namespace liveutils {
 
 enum class LogLevel { kDebug, kInfo, kWarn, kError };
 
-// 日志写到 stderr、OutputDebugString 和可选文件；进程内线程安全
+// 日志写到 stderr、OutputDebugString 和可选滚动文件；进程内线程安全
 void SetLogFile(const std::wstring& path);
 void Log(LogLevel level, const std::string& component,
          const std::string& message);

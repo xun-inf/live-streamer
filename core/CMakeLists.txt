@@ -10,6 +10,7 @@ endif()
 get_filename_component(LIVESTREAMER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(FlatBuffers)
+include(Spdlog)
 
 if(LIVESTREAMER_SCHEMA_ONLY)
   include(Schemas)
@@ -27,6 +28,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+livestreamer_add_spdlog()
+
 # 只作用于本项目自己的 target，不影响 FetchContent 拉进来的第三方工程
 add_library(livestreamer_options INTERFACE)
 target_compile_definitions(livestreamer_options INTERFACE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
@@ -37,9 +40,9 @@ endif()
 add_subdirectory(utils)
 add_subdirectory(media-service)
 
-# 统一输出目录：可执行文件都落到仓库根的 build/out/<Config>（多配置生成器自动追加配置名，
-# 单配置生成器如 Ninja 则直接是 build/out）。静态库和中间产物留在各自的 build/core 子目录里。
-get_filename_component(LIVESTREAMER_OUTPUT_DIR "${LIVESTREAMER_ROOT}/build/out" ABSOLUTE)
+# 统一输出目录：可执行文件都落到仓库根的 build/bin/<Config>（多配置生成器自动追加配置名，
+# 单配置生成器如 Ninja 则直接是 build/bin）。静态库和中间产物留在各自的 build/core 子目录里。
+get_filename_component(LIVESTREAMER_OUTPUT_DIR "${LIVESTREAMER_ROOT}/build/bin" ABSOLUTE)
 
 foreach(target liveStreamer mediaService)
   # liveStreamer（宿主）尚未创建，先跳过，等目标就位后自动生效
