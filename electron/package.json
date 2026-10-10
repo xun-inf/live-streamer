@@ -6,16 +6,29 @@
   "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build:main": "tsc -p tsconfig.json",
+    "build:app": "npm run typecheck:app && vite build",
+    "build": "npm run build:main && npm run build:app",
+    "test:windows": "npm run build && electron test/window-smoke.mjs",
+    "test:native-preview": "npm run build && electron test/native-preview-smoke.mjs",
     "start": "electron .",
-    "dev": "npm run build && electron ."
+    "dev": "npm run build:main && npm run typecheck:app && node scripts/dev.mjs",
+    "test:windows:dev": "npm run build:main && node scripts/dev.mjs --smoke",
+    "typecheck:app": "tsc -p tsconfig.app.json"
   },
   "dependencies": {
-    "flatbuffers": "25.9.23"
+    "@electron/remote": "^2.1.2",
+    "flatbuffers": "25.9.23",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "electron": "^44.4.3",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^8.3.4"
   }
 }

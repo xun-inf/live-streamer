@@ -1,51 +1,66 @@
 #pragma once
 
-#include <memory>
-
 #include "config.h"
 #include "ipcserver.h"
-#include "ntwindowmgr.h"
+#include "eventloop.h"
+#include "nativewindowmgr.h"
 
-class MsApplicationPrivate;
-
-class MsApplication {
-  std::unique_ptr<MsApplicationPrivate> d_ptr;
-
-  static MsApplication* s_instance;
+class MediaServiceApplication
+{
+    static MediaServiceApplication* s_instance;
 
 public:
-  MsApplication(int argc, char** argv);
-  ~MsApplication();
+    MediaServiceApplication(int argc, char** argv);
+    ~MediaServiceApplication();
 
-  MsApplication(const MsApplication&) = delete;
-  MsApplication& operator=(const MsApplication&) = delete;
+    MediaServiceApplication(const MediaServiceApplication&) = delete;
+    MediaServiceApplication& operator=(const MediaServiceApplication&) = delete;
 
-  static MsApplication* instance() {
-    return MsApplication::s_instance;
-  }
+    static MediaServiceApplication* instance()
+    {
+        return MediaServiceApplication::s_instance;
+    }
 
-  MsConfig* config() {
-    return &m_config;
-  }
+    Config* config()
+    {
+        return &m_config;
+    }
 
-  IpcServer* ipcServer() {
-    return &m_ipcServer;
-  }
+    IpcServer* ipcServer()
+    {
+        return &m_ipcServer;
+    }
 
-  NtWindowMgr* windowMgr() {
-    return &m_windowMgr;
-  }
+    NativeWindowMgr* nativeWindowMgr()
+    {
+        return &m_nativeWindowMgr;
+    }
 
-  bool Initialize();
+    EventLoop* eventLoop()
+    {
+        return &m_eventLoop;
+    }
 
-  bool Exec();
+    // initialize、exec 和析构在同一个 UI 线程调用，不在 exec 中重入。
+    // 准备事件循环、窗口管理器和业务处理器，可重复调用。
+    bool initialize();
+
+    // 每轮运行前须 initialize；运行结束或启动失败后需重新初始化。
+    bool exec();
 
 private:
-  MsConfig m_config;
+    void cleanup();
 
-  IpcServer m_ipcServer;
+    bool m_initialized = false;
 
-  NtWindowMgr m_windowMgr;
+    Config m_config;
+
+    // UI 循环必须比 IPC 回调和组件管理器存活更久。
+    EventLoop m_eventLoop;
+
+    IpcServer m_ipcServer;
+
+    NativeWindowMgr m_nativeWindowMgr;
 };
 
-#define msApp MsApplication::instance()
+#define msApp MediaServiceApplication::instance()

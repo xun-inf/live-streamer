@@ -1,40 +1,41 @@
 #pragma once
 
+#include "ipchandler.h"
+
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <functional>
 
-class IpcHandler;
 class IpcServerPrivate;
 
-// 客户端断开回调（IPC 线程上调用）：实现里只置标志，别做重活
+// 客户端断开或监听失败时在 IPC 线程上调用；不要在回调里调用 stop。
 using DisconnectCallback = std::function<void()>;
 
-class IpcServer {
+class IpcServer
+{
     std::unique_ptr<IpcServerPrivate> d_ptr;
 
 public:
-    IpcServer();
+    // 回调在构造时绑定且保持不变，可为空。
+    // 回调捕获的对象也应比服务器存活更久。
+    explicit IpcServer(DisconnectCallback callback = {});
     ~IpcServer();
 
     IpcServer(const IpcServer&) = delete;
     IpcServer& operator=(const IpcServer&) = delete;
 
-    // 必须在 Start 之前设置
-    void SetDisconnectCallback(DisconnectCallback callback);
-
     bool connected() const;
 
-    // 注册/反注册 IPC 消息处理器：按 handler->domain() 索引，一个域只能注册一个。
-    // 注册后该域的消息会在 IPC 线程上转给 handler->OnIpcMessage()。
-    // 线程安全；handler 由调用方持有，反注册之后再销毁
-    bool Register(std::shared_ptr<IpcHandler> handler);
+    // 线程安全，可随时注册业务处理器；同一 Domain 的重复注册返回 false，不替换已有 handler。
+    // Server 持有 handler 的 shared_ptr，消息在 IPC 线程上交给 onIpcMessage。
+    bool registerHandler(std::shared_ptr<IpcHandler> handler);
 
-    bool Start(const std::string& pipeName);
-    void Stop();
+    // start/stop 由应用生命周期线程串行调用；成功表示监听端点已创建。
+    bool start(const std::string& pipeName);
+    void stop();
 
-    // 线程安全：由内部线程调用，内部串行化
-    bool Send(const std::vector<uint8_t>& msg);
+    // 线程安全，按完整帧串行同步发送；连接未建立或正在停机时返回 false。
+    bool send(const std::vector<uint8_t>& msg);
 };

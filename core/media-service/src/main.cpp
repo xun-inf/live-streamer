@@ -1,16 +1,68 @@
 #include "application.h"
+#include "base/logger.h"
 
+#if defined(_WIN32)
 #include <windows.h>
 
-// media-service：Electron 拉起的子进程，提供命名管道服务与本地窗口。
-int main(int argc, char** argv) {
-  // 认父到别人的窗口要按物理像素摆位：本进程必须自己就是 per-monitor v2 aware，
-  // 否则 SetWindowPos 的坐标会被系统 DPI 虚拟化，位置和尺寸全不对
-  ::SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+#include <string>
+#include <utility>
+#include <vector>
+#endif
 
-  MsApplication app(argc, argv);
-  if (!app.Initialize()) {
-    return 1;
-  }
-  return app.Exec() ? 0 : 1;
+namespace
+{
+
+// media-service：Electron 拉起的子进程，提供 IPC 服务与可视组件。
+int runApplication(int argc, char** argv)
+{
+    MediaServiceApplication app(argc, argv);
+    if (!app.initialize())
+    {
+        return 1;
+    }
+    return app.exec() ? 0 : 1;
 }
+
+} // namespace
+
+#if defined(_WIN32)
+int wmain(int argc, wchar_t** argv)
+{
+    std::vector<std::string> utf8Args;
+    utf8Args.reserve(argc);
+    for (int i = 0; i < argc; ++i)
+    {
+        const int size = ::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argv[i], -1,
+                                              nullptr, 0, nullptr, nullptr);
+        if (size == 0)
+        {
+            mediaservice::logger().logError("app", "failed to encode command-line arguments as UTF-8");
+            return 1;
+        }
+
+        std::string arg(static_cast<std::size_t>(size), '\0');
+        if (::WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argv[i], -1,
+                                 arg.data(), size, nullptr, nullptr) != size)
+        {
+            mediaservice::logger().logError("app", "failed to encode command-line arguments as UTF-8");
+            return 1;
+        }
+        arg.resize(static_cast<std::size_t>(size - 1));
+        utf8Args.push_back(std::move(arg));
+    }
+
+    std::vector<char*> utf8Argv;
+    utf8Argv.reserve(static_cast<std::size_t>(argc) + 1);
+    for (std::string& arg : utf8Args)
+    {
+        utf8Argv.push_back(arg.data());
+    }
+    utf8Argv.push_back(nullptr);
+    return runApplication(argc, utf8Argv.data());
+}
+#else
+int main(int argc, char** argv)
+{
+    return runApplication(argc, argv);
+}
+#endif

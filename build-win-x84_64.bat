@@ -1,14 +1,14 @@
 @echo off
 rem live-streamer: one-click build for Windows x64.
 rem Builds the C++ core (build/core) and the Electron app, same as:
-rem     python scripts\build.py --generator "Visual Studio 18 2026" --toolset v145 [--config Debug^|Release]
+rem     python scripts\build.py --generator "Visual Studio 17 2022" --toolset v143 [--config Debug^|Release]
 setlocal
 cd /d "%~dp0"
 
 set "PY=python"
 where python >nul 2>nul || set "PY=py -3"
 
-%PY% "scripts\build.py" --generator "Visual Studio 18 2026" --toolset v145 %*
+%PY% "scripts\build.py" --generator "Visual Studio 17 2022" --toolset v143 %*
 set "CODE=%ERRORLEVEL%"
 
 echo.

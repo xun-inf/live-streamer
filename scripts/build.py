@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""live-streamer 构建脚本：原生侧（C++/CMake）+ Electron（tsc）。
+"""live-streamer 构建脚本：原生侧（C++/CMake）+ Electron（tsc + Vite）。
 
 用法：
     python scripts/build.py [--config Debug]
@@ -93,14 +93,43 @@ def executable_name(name: str) -> str:
     return name + ".exe" if IS_WINDOWS else name
 
 
-def build_native(config: str, generator: str = "", toolset: str = "") -> None:
+def build_cpp(config: str, generator: str = "", toolset: str = "") -> None:
     configure = ["cmake", "-S", CORE_DIR, "-B", BUILD_DIR]
+    requested = {}
     if generator:
         configure += ["-G", generator]
+        requested["CMAKE_GENERATOR"] = generator
     if IS_WINDOWS:
         configure += ["-A", "x64"]
+        requested["CMAKE_GENERATOR_PLATFORM"] = "x64"
     if toolset:
         configure += ["-T", toolset]
+        requested["CMAKE_GENERATOR_TOOLSET"] = toolset
+
+    cache_file = BUILD_DIR / "CMakeCache.txt"
+    if cache_file.exists():
+        cached = {}
+        for line in cache_file.read_text(encoding="utf-8-sig").splitlines():
+            key, separator, value = line.partition("=")
+            if separator:
+                cached[key.partition(":")[0]] = value
+        changes = [
+            "{0}: {1!r} -> {2!r}".format(key, cached[key], value)
+            for key, value in requested.items()
+            if key in cached and cached[key] != value
+        ]
+        if changes:
+            log("CMake 构建配置已变更，重新生成缓存（{0}）".format("; ".join(changes)))
+            # 只调整架构/工具集时，保留调用方未指定的生成器设置。
+            cached_generator = cached.get("CMAKE_GENERATOR", "")
+            if not generator and cached_generator:
+                configure += ["-G", cached_generator]
+            if not toolset and (not generator or generator == cached_generator):
+                cached_toolset = cached.get("CMAKE_GENERATOR_TOOLSET", "")
+                if cached_toolset:
+                    configure += ["-T", cached_toolset]
+            configure.append("--fresh")
+
     run_command(configure)
     run_command(["cmake", "--build", BUILD_DIR, "--config", config, "--parallel"])
     log("原生侧构建完成（config {0}）".format(config))
@@ -121,7 +150,9 @@ def electron_binary() -> Path:
 
 def prepare_electron() -> None:
     npm = find_npm()
-    if not (ELECTRON_DIR / "node_modules").exists():
+    required_packages = ("electron", "typescript", "vite", "@vitejs/plugin-react", "react", "react-dom")
+    if any(not (ELECTRON_DIR / "node_modules" / package / "package.json").exists()
+           for package in required_packages):
         run_command([npm, "install"], cwd=ELECTRON_DIR)
 
     binary = electron_binary()
@@ -324,11 +355,14 @@ def stage(config: str) -> Path:
     shutil.copy2(ELECTRON_DIR / "package.json", app / "package.json")
     copy_tree(ELECTRON_DIR / "dist", app / "dist")
     copy_tree(ELECTRON_DIR / "src" / "preload", app / "src" / "preload")
-    copy_tree(ELECTRON_DIR / "src" / "renderer", app / "src" / "renderer")
-    # 唯一的运行时依赖：生成的协议代码 import 'flatbuffers'
+    # React 已打进 dist/app；保留协议编码及 Electron remote 的运行时依赖。
     copy_tree(
         ELECTRON_DIR / "node_modules" / "flatbuffers",
         app / "node_modules" / "flatbuffers",
+    )
+    copy_tree(
+        ELECTRON_DIR / "node_modules" / "@electron" / "remote",
+        app / "node_modules" / "@electron" / "remote",
     )
 
     log("产物目录（可分发）: {0}".format(target))
@@ -341,7 +375,7 @@ def build_all(
     generator: str = "",
     toolset: str = "",
 ) -> None:
-    build_native(config, generator, toolset)
+    build_cpp(config, generator, toolset)
     prepare_electron()
     if stage_output:
         stage(config)
@@ -351,9 +385,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="live-streamer 构建脚本")
     parser.add_argument("--config", default="Debug", help="Debug / Release")
     parser.add_argument(
-        "--generator", default="", help="CMake generator，例如 Visual Studio 18 2026"
+        "--generator", default="", help="CMake generator，例如 Visual Studio 17 2022"
     )
-    parser.add_argument("--toolset", default="", help="CMake toolset，例如 v145")
+    parser.add_argument("--toolset", default="", help="CMake toolset，例如 v143")
     parser.add_argument(
         "--no-stage", action="store_true", help="只构建，不铺 build/bin/<config> 目录"
     )

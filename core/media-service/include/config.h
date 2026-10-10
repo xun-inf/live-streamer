@@ -3,17 +3,19 @@
 #include <string>
 
 // 命令行配置：media-service 由 Electron 拉起，参数都在命令行里
-class MsConfig {
+class Config
+{
 public:
-    MsConfig(int argc, char** argv);
-    ~MsConfig();
+    Config(int argc, char** argv);
+    ~Config();
 
     // 命名管道名（\\.\pipe\xxx）
     std::string pipeName();
-    // 拉起我们的 Electron 主进程 pid；0 表示没传
-    unsigned long parentPid();
+
+    // 可选日志文件路径（UTF-8）；空路径表示仅输出到控制台和调试器。
+    const std::string& logPath() const;
 
 private:
     std::string m_pipeName;
-    unsigned long m_parentPid = 0;
+    std::string m_logPath;
 };

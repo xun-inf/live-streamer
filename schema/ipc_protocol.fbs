@@ -1,0 +1,29 @@
+// IPC 协议总表：主业务标识（Domain）+ 各业务自己的消息。
+//
+// 传输：Named Pipe 字节流，每条消息 = 4 字节小端长度前缀 + FlatBuffer 字节
+// 生成：scripts/schema.py -> core/common/ipcs/ipc_protocol.h 和 electron/src/common/ipcs
+//
+// 约定：
+//   * 一个业务一个 .fbs（ipc_nativewindow.fbs / ipc_session.fbs ...）：表 + 自己的 union 都在域文件里，
+//     本文件只 include。不把所有消息塞进一个全局 union——那样每加一条消息都要动这里，
+//     所有域的类型名还挤在一个命名空间里
+//   * 加一个业务：新建 ipc_<域>.fbs + 这里 include + Domain 加成员 + Envelope 加一个 union 字段
+//     + 加一个 <域> handler
+//   * 消息成员显式编号：插入/删除消息不会把后面的号顶掉（0 是 *_NONE）
+//   * Envelope 里只有 domain 指向的那个 union 字段会被填，其余为空
+
+include "ipc_nativewindow.fbs";
+
+// 主业务标识：Envelope 按它选路由（Domain_xxx -> <域> handler）
+enum Domain : byte {
+  None = 0,
+  NativeWindow = 1,
+}
+
+table Envelope {
+  domain: Domain;
+  // 一个业务一个 union 字段，对应各自 .fbs 里的 union
+  native_window: NativeWindowPayload;
+}
+
+root_type Envelope;

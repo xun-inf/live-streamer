@@ -23,7 +23,10 @@ function(livestreamer_add_spdlog)
   set(SPDLOG_BUILD_BENCH OFF CACHE BOOL "" FORCE)
   set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
   set(SPDLOG_SYSTEM_INCLUDES ON CACHE BOOL "" FORCE)
-  set(SPDLOG_WCHAR_FILENAMES ON CACHE BOOL "" FORCE)
+  # Windows 文件 API 在依赖内部使用 UTF-16；公共 Logger 接口始终接收 UTF-8。
+  set(SPDLOG_WCHAR_FILENAMES "${WIN32}" CACHE BOOL "" FORCE)
+  # 调试器输出也在依赖内部从 UTF-8 转换为 UTF-16。
+  set(SPDLOG_WCHAR_SUPPORT "${WIN32}" CACHE BOOL "" FORCE)
 
   if(LIVESTREAMER_SPDLOG_ROOT)
     get_filename_component(_spdlog_root

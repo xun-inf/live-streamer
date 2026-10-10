@@ -1,0 +1,48 @@
+// NativeWindow IPC：原生画面窗口（四层窗口模式的第 3 层）的业务表和本域消息清单。
+// Windows 实现是 owner 指向 Electron 主窗口的 WS_POPUP overlay，随主窗口一起隐藏。
+//
+// 传输：Named Pipe 字节流，每条消息 = 4 字节小端长度前缀 + FlatBuffer 字节
+// 方向：Electron Main（Client） -> media-service（Server），当前全是单向消息
+// 汇总：总表 Envelope 和主业务标识 Domain 在 ipc_protocol.fbs；本文件的新消息只加下面的 union，
+//       ipc_protocol.fbs 不用动
+// 生成：scripts/schema.py -> core/common/ipcs/ipc_nativewindow.h 和 electron/src/common/ipcs
+//
+// 控件 id：每条消息都带 id，0 是主控件（kMainNativeWindowId），其余按 id 找/建附加控件，
+// 一个 id 一个控件；id 加在表尾，不动已有字段的编号
+
+// Main -> Engine：把 engine 自己建的控件挂接到 Electron 主窗口
+// parent_handle 是消费端主窗口的原生句柄（Windows 为 HWND）；show 控制挂接后是否立刻显示
+table AttachNativeWindow {
+  parent_handle: ulong;
+  show: bool;
+  // 目标控件：0 = 主控件；其余 id 没建过就先建
+  id: uint;
+}
+
+// Main -> Engine：控件的矩形，父窗口客户区坐标系下的物理像素
+table SetNativeWindowRect {
+  x: int;
+  y: int;
+  width: int;
+  height: int;
+  // 目标控件：0 = 主控件
+  id: uint;
+}
+
+// Main -> Engine：从父窗口上摘下来（隐藏控件，保留以便再次挂接）
+table DetachNativeWindow {
+  // 目标控件：0 = 主控件
+  id: uint;
+}
+
+// 控件域的消息清单：只放本域的表
+table ReleaseNativeWindow {
+  id: uint;
+}
+
+union NativeWindowPayload {
+  AttachNativeWindow = 1,
+  SetNativeWindowRect = 2,
+  DetachNativeWindow = 3,
+  ReleaseNativeWindow = 4,
+}

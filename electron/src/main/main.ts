@@ -1,404 +1,92 @@
-// Electron 主进程：入口。拉起 media-service 子进程 -> 连它的 Named Pipe ->
-// 把主窗口 HWND 交给 engine 认父（四层窗口模式的第 3 层：本地窗口挂在主窗口下），
-// 页面量出来的矩形（物理像素、父窗口客户区坐标系）驱动子窗口摆位。
-import { app, BrowserWindow, ipcMain } from 'electron';
-import fs from 'node:fs';
+// Electron 入口：创建主窗口、连接 media-service，并统一处理应用退出。
+import { app, nativeTheme } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { registerHandlers } from './ipc/registerHandlers.js';
+import { mediaService } from './mediaService/index.js';
 import { argValue, resolvePaths } from './appPaths.js';
-import { EngineProcess } from './engineProcess.js';
-import { WindowBridge } from './windowBridge.js';
+import { logger } from './logger.js';
+import { initializeRemote } from './remote.js';
+import { mainWindow } from './windows/mainWindow.js';
+import { windowManager } from './windows/windowManager.js';
+import { childWindow } from './windows/childWindow.js';
+
+const paths = resolvePaths();
+
+// 页面使用固定深色主题，原生非客户区也保持深色，避免拖动时露出浅色边框。
+nativeTheme.themeSource = 'dark';
+
+logger.initialize(paths.mainLogPath);
+initializeRemote();
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-// dist/main -> electron/src
+// preload 保留源码路径；app 使用 Vite 开发地址或 dist/app 构建产物。
 const sourceDir = path.resolve(currentDir, '..', '..', 'src');
+const devServerUrl = !app.isPackaged ? process.env.VITE_DEV_SERVER_URL : undefined;
+const devtoolsValue = argValue('devtools').toLowerCase();
+const devtoolsEnabled = !['0', 'false', 'off'].includes(devtoolsValue);
 
-// 路径都在 appPaths.ts 里算：以 UI 进程 exe 所在目录为基准（开发期 electron.exe，产物 live-streamer.exe）
-const paths = resolvePaths();
-// 调试窗口：默认弹一个（--devtools=0 关掉，连 F12 一起关）
-const devtoolsEnabled = (() => {
-  const value = argValue('devtools').toLowerCase();
-  return value !== '0' && value !== 'false' && value !== 'off';
-})();
-
-function log(message: string): void {
-  const line = new Date().toISOString() + ' [ui] ' + message;
-  console.log(line);
-  try {
-    fs.appendFileSync(paths.uiLogPath, line + '\n');
-  } catch {
-    // 日志不可写不影响主流程
-  }
-}
-
-// 页面量出来的画面区域：x/y/width/height 是 CSS px（相对视口），dpr 用来换算物理像素；
-// id 是 engine 侧的窗口 id：0 = 主窗口，其余按 id 建/找附加窗口
-interface ViewRect {
-  id: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  dpr: number;
-}
-
-const bridge = new WindowBridge();
-const engineProcess = new EngineProcess(log, onEngineExit);
-
-// 页面里量两个并列区域，对应 engine 侧的 1、2 号附加窗口（0 是主窗口，留着）
-const VIEW_WINDOW_IDS = [1, 2];
-
-let mainWindow: BrowserWindow | null = null;
+let unregisterHandlers: (() => void) | null = null;
 let shuttingDown = false;
-let rendererAlive = false;
-let engineStarted = false;
-const attachedIds = new Set<number>();
-const lastRectKeys = new Map<number, string>();
-let status = { connected: false, message: '连接中…' };
+let quitAllowed = false;
+let shutdownPromise: Promise<void> | null = null;
 
-// 渲染进程不在（崩了 / 正在重载）时 webContents.send 会抛，必须吞掉
-function sendToRenderer(channel: string, ...args: unknown[]): boolean {
-  const target = mainWindow;
-  if (target === null || target.isDestroyed() || !rendererAlive) {
-    return false;
-  }
-  try {
-    target.webContents.send(channel, ...args);
-    return true;
-  } catch (error) {
-    rendererAlive = false;
-    log('send to renderer failed: ' + String(error));
-    return false;
-  }
-}
+mediaService.initialize({ paths });
 
-function setStatus(connected: boolean, message: string): void {
-  if (message !== status.message || connected !== status.connected) {
-    log('status: ' + message);
-  }
-  status = { connected, message };
-  sendToRenderer('app:status', status);
-}
+const nativeWindowMgr = mediaService.nativeWindowMgr;
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const appBaseUrl = devServerUrl || pathToFileURL(path.resolve(currentDir, '..', 'app') + path.sep).href;
+const windowConfig = {
+  pageUrls: { Settings: new URL('settings.html', appBaseUrl).href },
+  preload: path.join(sourceDir, 'preload', 'preload.cjs'),
+};
+Object.assign(globalThis, { nativeWindowMgr: nativeWindowMgr, windowManager, windowConfig });
 
-// engine 没了：主进程还活着，把状态摆成断开；页面重载时会重新拉起它
-function onEngineExit(code: number | null, signal: string | null): void {
-  attachedIds.clear();
-  engineStarted = false;
-  bridge.close();
-  if (!shuttingDown) {
-    setStatus(
-      false,
-      'media-service 已退出: code=' + String(code) + ', signal=' + String(signal ?? ''),
-    );
-  }
-}
-
-function onPipeClosed(reason: string): void {
-  setStatus(false, '已断开: ' + reason);
-}
-
-// media-service 可能比 Electron 晚一点创建 pipe，这里重试到超时为止
-async function connectWithRetry(): Promise<void> {
-  const deadline = Date.now() + 10000;
-  let lastError = '';
-  while (Date.now() < deadline) {
-    try {
-      await bridge.connect(paths.pipeName, onPipeClosed);
-      return;
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
-      await delay(200);
-    }
-  }
-  throw new Error('连接 media-service 失败: ' + lastError);
-}
-
-// Electron 主窗口的 HWND：Windows 下 getNativeWindowHandle 给的就是窗口句柄。
-// 64 位进程里是 8 字节，退一步按低 32 位读也能用（句柄值实际用不满 64 位）
-function windowHandleOf(target: BrowserWindow): bigint {
-  const buffer = target.getNativeWindowHandle();
-  return buffer.length >= 8
-    ? buffer.readBigUInt64LE(0)
-    : BigInt(buffer.readUInt32LE(0));
-}
-
-// 页面量出来的矩形 -> 本地窗口（物理像素，父窗口客户区坐标系）
-function applyWindowRect(rect: ViewRect): void {
-  const dpr = rect.dpr > 0 ? rect.dpr : 1;
-  const x = Math.round(rect.x * dpr);
-  const y = Math.round(rect.y * dpr);
-  const width = Math.round(rect.width * dpr);
-  const height = Math.round(rect.height * dpr);
-  if (!bridge.setWindowRect(rect.id, x, y, width, height)) {
-    return;
-  }
-  const key = x + ',' + y + ',' + width + ',' + height;
-  if (key !== lastRectKeys.get(rect.id)) {
-    lastRectKeys.set(rect.id, key);
-    log('window ' + rect.id + ' rect: ' + key);
-  }
-}
-
-// 第 3 层：把 engine 自己建的本地窗口认父到本进程的主窗口上（逐个窗口 id）
-async function attachWindows(): Promise<void> {
-  const target = mainWindow;
-  if (target === null || target.isDestroyed()) {
-    return;
-  }
-  const hwnd = windowHandleOf(target);
-  attachedIds.clear();
-  for (const id of VIEW_WINDOW_IDS) {
-    if (!bridge.attachWindow(id, hwnd, true)) {
-      log('attachWindow 发送失败: pipe 未连接 (id=' + id + ')');
-      return;
-    }
-    attachedIds.add(id);
-    log('attachWindow 已发送: id=' + id + ' main hwnd=0x' + hwnd.toString(16));
-  }
-  sendToRenderer('video:measure');
-}
-
-function createWindow(): void {
-  // 打包产物里没有 config/（只有 bin 内容摊在根部），窗口/任务栏图标由 rcedit 写进 live-streamer.exe；
-  // 只有开发期显式传 --config-dir= 时才去仓库 config/ 里找 app.ico
-  const iconPath = path.join(paths.configDir, 'app.ico');
-  const hasIcon = fs.existsSync(iconPath);
-  if (!hasIcon && argValue('config-dir') !== '') {
-    log('窗口图标不存在: ' + iconPath);
-  }
-  mainWindow = new BrowserWindow({
-    width: 1260,
-    height: 672,
-    minWidth: 1020,
-    minHeight: 600,
-    frame: false,
-    show: false,
-    title: 'LIVE Streamer',
-    backgroundColor: '#0f141a',
-    icon: hasIcon ? iconPath : undefined,
-    webPreferences: {
-      preload: path.join(sourceDir, 'preload', 'preload.cjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-  });
-  mainWindow.on('close', (event) => {
-    if (shuttingDown) {
-      return;
-    }
-    event.preventDefault();
-    void shutdown();
-  });
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-    rendererAlive = false;
-  });
-  // 窗口一动就得重新量：本地窗口是父窗口客户区的内容，父窗口动它必须跟着动
-  const requestMeasure = (): void => {
-    sendToRenderer('video:measure');
-  };
-  mainWindow.on('resize', requestMeasure);
-  mainWindow.on('move', requestMeasure);
-  mainWindow.on('show', requestMeasure);
-  mainWindow.on('restore', requestMeasure);
-  mainWindow.on('minimize', requestMeasure);
-  mainWindow.on('maximize', requestMeasure);
-  mainWindow.on('unmaximize', requestMeasure);
-  mainWindow.on('enter-full-screen', requestMeasure);
-  mainWindow.on('leave-full-screen', requestMeasure);
-  // 最大化状态回灌给页面，切标题栏那个按钮的图标
-  mainWindow.on('maximize', () => sendToRenderer('window:maximized', true));
-  mainWindow.on('unmaximize', () => sendToRenderer('window:maximized', false));
-  mainWindow.webContents.on('render-process-gone', (_event, details) => {
-    rendererAlive = false;
-    log('renderer gone: ' + details.reason);
-  });
-  // 页面里的 console 只有 DevTools 看得到，顺手转进 ui 日志一份，排问题方便
-  mainWindow.webContents.on('console-message', (...args: unknown[]) => {
-    const event = args[0] as {
-      level?: number | string;
-      message?: string;
-      lineNumber?: number;
-      sourceId?: string;
-    };
-    const message =
-      typeof event.message === 'string'
-        ? event.message
-        : typeof args[1] === 'string'
-          ? (args[1] as string)
-          : '';
-    if (message !== '') {
-      log('renderer: ' + message);
-    }
-  });
-  mainWindow.webContents.on('did-finish-load', () => {
-    rendererAlive = true;
-    void onRendererReady();
-  });
-  // F12 / Ctrl+Shift+I 随时开关调试窗口
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.type !== 'keyDown') {
-      return;
-    }
-    const isF12 = input.key === 'F12';
-    const isInspect =
-      (input.control || input.meta) &&
-      input.shift &&
-      input.key.toLowerCase() === 'i';
-    if ((isF12 || isInspect) && mainWindow !== null) {
-      event.preventDefault();
-      if (mainWindow.webContents.isDevToolsOpened()) {
-        mainWindow.webContents.closeDevTools();
-      } else {
-        mainWindow.webContents.openDevTools({ mode: 'detach' });
-      }
-    }
-  });
-  void mainWindow.loadFile(path.join(sourceDir, 'renderer', 'index.html'));
-  if (devtoolsEnabled) {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
-}
-
-// engine 必须等窗口 did-finish-load 之后再拉起来（先拉 engine 再建窗口会让退出偶发卡住）
-async function onRendererReady(): Promise<void> {
-  if (!engineStarted) {
-    engineStarted = true;
-    if (
-      !engineProcess.start({
-        exePath: paths.engineExe,
-        workingDir: path.dirname(paths.engineExe),
-        pipeName: paths.pipeName,
-        logPath: paths.engineLogPath,
-        parentPid: process.pid,
-      })
-    ) {
-      setStatus(false, 'media-service 启动失败: ' + paths.engineExe);
-      return;
-    }
-    try {
-      await connectWithRetry();
-    } catch (error) {
-      setStatus(false, error instanceof Error ? error.message : String(error));
-      return;
-    }
-    setStatus(true, '已连接');
-    await attachWindows();
-    return;
-  }
-  // 页面重载：pipe 还在主进程里，重新认父 + 让页面重新量一次矩形
-  if (bridge.connected) {
-    await attachWindows();
-  }
-}
-
-async function shutdown(): Promise<void> {
-  if (shuttingDown) {
-    return;
-  }
-  shuttingDown = true;
-  log('window closing');
-  // pipe 断了 engine 就没事可做了（它自己也会跟着收），这里再把进程收干净
-  bridge.close();
-  await engineProcess.stop();
-  app.quit();
-}
-
-function registerHandlers(): void {
-  ipcMain.handle('app:getStatus', () => status);
-  ipcMain.handle('app:getInfo', () => ({ version: app.getVersion() }));
-  ipcMain.on('video:rect', (_event, rect: unknown) => {
-    if (typeof rect !== 'object' || rect === null) {
-      return;
-    }
-    const value = rect as Partial<ViewRect>;
-    if (
-      typeof value.id !== 'number' ||
-      typeof value.x !== 'number' ||
-      typeof value.y !== 'number' ||
-      typeof value.width !== 'number' ||
-      typeof value.height !== 'number'
-    ) {
-      log('忽略非法画面矩形: ' + JSON.stringify(rect));
-      return;
-    }
-    applyWindowRect({
-      id: value.id,
-      x: value.x,
-      y: value.y,
-      width: value.width,
-      height: value.height,
-      dpr: typeof value.dpr === 'number' ? value.dpr : 1,
-    });
-  });
-  ipcMain.handle('video:attach', async () => {
-    await attachWindows();
-    return attachedIds.size === VIEW_WINDOW_IDS.length;
-  });
-  ipcMain.handle('video:detach', () => {
-    let sent = true;
-    for (const id of VIEW_WINDOW_IDS) {
-      sent = bridge.detachWindow(id) && sent;
-    }
-    attachedIds.clear();
-    log('view detached: ' + String(sent));
-    return sent;
-  });
-  ipcMain.on('window:minimize', () => {
-    mainWindow?.minimize();
-  });
-  ipcMain.on('window:toggleMaximize', () => {
-    const target = mainWindow;
-    if (target === null || target.isDestroyed()) {
-      return;
-    }
-    if (target.isMaximized()) {
-      target.unmaximize();
-    } else {
-      target.maximize();
-    }
-  });
-  ipcMain.on('window:close', () => {
-    mainWindow?.close();
-  });
-}
-
-async function main(): Promise<void> {
-  fs.mkdirSync(path.dirname(paths.uiLogPath), { recursive: true });
-  log(
-    'starting, pid=' +
-      process.pid +
-      ', appDir=' +
-      paths.appDir +
-      ', pipe=' +
-      paths.pipeName +
-      ', engine=' +
-      paths.engineExe +
-      ', devtools=' +
-      String(devtoolsEnabled),
-  );
-  registerHandlers();
-  // engine 的启动放在窗口 did-finish-load 之后，见 onRendererReady
-  createWindow();
-}
-
-app.on('before-quit', () => {
-  shuttingDown = true;
-  // 正常路径 shutdown() 已经收过 engine 了，这里兜底被别处直接 quit 的情况
-  if (engineProcess.running) {
-    void engineProcess.stop();
-  }
+mainWindow.initialize({
+  paths,
+  sourceDir,
+  pageUrl: new URL('main.html', appBaseUrl).href,
+  devtoolsEnabled,
+  canClose: () => quitAllowed,
+  onClose: () => { void shutdown(); },
 });
-app.on('window-all-closed', () => {
-  app.quit();
+
+childWindow.initialize({ pageUrl: windowConfig.pageUrls.Settings, preload: windowConfig.preload });
+
+logger.info('starting, pid=' + process.pid + ', appDir=' + paths.appDir +
+  ', pipe=' + paths.pipeName + ', mediaServiceExe=' + paths.mediaServiceExe + ', devtools=' + devtoolsEnabled);
+
+app.on('before-quit', (event) => {
+  if (quitAllowed) return;
+  event.preventDefault();
+  void shutdown();
 });
-app.whenReady().then(main);
+app.on('window-all-closed', () => { void shutdown(); });
+app.whenReady().then(() => {
+  if (shuttingDown) return;
+  unregisterHandlers = registerHandlers(mediaService);
+  mainWindow.create();
+  childWindow.create();
+}).catch((error: unknown) => {
+  logger.error('main start failed:', error);
+  void shutdown();
+});
+
+function shutdown(): Promise<void> {
+  if (shutdownPromise !== null) return shutdownPromise;
+  shuttingDown = true;
+  logger.info('window closing');
+  windowManager.stop();
+  mainWindow.stop();
+  unregisterHandlers?.();
+  unregisterHandlers = null;
+  shutdownPromise = mediaService.stop().catch((error: unknown) => {
+    logger.error('media-service stop failed:', error);
+  }).then(() => {
+    quitAllowed = true;
+    windowManager.destroy();
+    app.quit();
+  });
+  return shutdownPromise;
+}
