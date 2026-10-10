@@ -1,0 +1,216 @@
+electron/src/app/types.d.ts
+  s_c488f00bc49201::t_8592752e15b388 29
+  s_c488f00bc49201::t_6d55893564eb7d 1
+  s_c488f00bc49201::t_e186e6ea7c0c33 19,63-65
+electron/src/main/mediaservice/mediaService.ts
+  s_c488f00bc49201::t_ee370649f3878d 53
+  s_c488f00bc49201::t_682cbd0cdfea09 11,52,66,135,280,326
+  s_c488f00bc49201::t_aee2bd3c693bc4 12
+electron/src/main/ipcmain/registerHandlers.ts
+  s_c488f00bc49201::t_45ae06ee636df9 1,6,10,15-24,30,33,38
+  s_c488f00bc49201::t_682cbd0cdfea09 4,28-29,31-32,34-37,39,43-44
+core/node-streampreview/CMakeLists.txt
+  s_c488f00bc49201::t_ee370649f3878d 1-15
+electron/src/app/components/StreamPreview/index.tsx
+  s_c488f00bc49201::t_e186e6ea7c0c33 1-42,44-53
+  s_c488f00bc49201::t_b92214953ebc06 43
+electron/src/app/entries/secondscreen.tsx
+  s_c488f00bc49201::t_6d55893564eb7d 1-5
+electron/src/main/ipchandlers/StreamPreviewHandler.ts
+  s_c488f00bc49201::t_aee2bd3c693bc4 1-9,11-12,14-28,31-42
+  s_c488f00bc49201::t_682cbd0cdfea09 10,13,29-30
+electron/src/main/ipchandlers/registerHandlers.ts
+  s_c488f00bc49201::t_aee2bd3c693bc4 1,3-5,8-10
+  s_c488f00bc49201::t_682cbd0cdfea09 2,6-7
+electron/src/preload/preload.cjs
+  s_c488f00bc49201::t_1d0df04149aa24 3
+electron/src/app/components/StreamPreview/streamPreview.ts
+  s_c488f00bc49201::t_b92214953ebc06 10-19,21-22,26-28,35,40-41,46-48,50-124,140,155-156,159-165
+  s_c488f00bc49201::t_e186e6ea7c0c33 1-9,20,23-25,29-34,36-39,42-45,49,125-139,141-154,157-158,166-170
+electron/src/main/mediaservice/IpcBuffer.ts
+  s_c488f00bc49201::t_aee2bd3c693bc4 1-46
+core/media-service/CMakeLists.txt
+  s_c488f00bc49201::t_ee48d59cda0ab4 13-16,45
+electron/vite.config.mjs
+  s_c488f00bc49201::t_6d55893564eb7d 25
+electron/test/ipc-handlers.mjs
+  s_c488f00bc49201::t_7fd72ee6ad2bea 1-152
+electron/src/main/mediaservice/streampreview/StreamPreview.ts
+  s_c488f00bc49201::t_682cbd0cdfea09 1-101
+electron/src/main/mediaservice/IpcHandler.ts
+  s_c488f00bc49201::t_aee2bd3c693bc4 1-10
+electron/src/main/mediaservice/IpcClient.ts
+  s_c488f00bc49201::t_aee2bd3c693bc4 5-8,32,96-102,219-231,233-235
+electron/src/app/pages/Main/index.tsx
+  s_c488f00bc49201::t_3faddad4f9b455 31
+  s_c488f00bc49201::t_8592752e15b388 3,8-13,17,35-38,40
+electron/src/app/styles.css
+  s_c488f00bc49201::t_8592752e15b388 172,182-183
+  s_c488f00bc49201::t_6d55893564eb7d 211-212
+  s_c488f00bc49201::t_45ae06ee636df9 213-214
+electron/src/main/main.ts
+  s_c488f00bc49201::t_757ef07716a9fc 6
+  s_c488f00bc49201::t_442cb89ad93362 42
+  s_c488f00bc49201::t_783c6dc9407c3e 41
+  s_c488f00bc49201::t_45ae06ee636df9 69
+  s_c488f00bc49201::t_a5ca32ea43f114 7
+core/CMakeLists.txt
+  s_c488f00bc49201::t_45ae06ee636df9 42,44
+  s_c488f00bc49201::t_ee370649f3878d 43
+electron/src/preload/streampreview.cjs
+  s_c488f00bc49201::t_1d0df04149aa24 1-18,21-26,28-35,37-39,45
+  s_c488f00bc49201::t_783c6dc9407c3e 19-20,27,36,40-44
+electron/src/app/secondscreen.html
+  s_c488f00bc49201::t_6d55893564eb7d 1-13
+electron/package.json
+  s_c488f00bc49201::t_7fd72ee6ad2bea 13
+electron/src/app/pages/SecondScreen.tsx
+  s_c488f00bc49201::t_f45d643a510941 1,6,10,19-23
+  s_c488f00bc49201::t_6d55893564eb7d 2-5,7-9,11-18,24-27
+electron/src/main/windows/mainWindow.ts
+  s_c488f00bc49201::t_757ef07716a9fc 8
+  s_c488f00bc49201::t_373367f32c9be6 7
+core/cmake/Schemas.cmake
+  s_c488f00bc49201::t_6650015ae268f3 10-11
+core/common/ipcs/ipc_protocol.h
+  s_1e1304af24d561::t_1315bb7c76ee78 17,25,27,30,33-34,40,43,50,60-62,86-98,105-107,126-133,148-153,170-172,174,176
+core/common/ipcs/ipc_streampreview.h
+  s_c488f00bc49201::t_0c6d99146ec9cd 1-241
+core/media-service/include/application.h
+  s_c488f00bc49201::t_f1e2c4541c7ec2 7,45-49,70
+core/media-service/include/streampreview/streampreview.h
+  s_c488f00bc49201::t_a8af5812e18979 1-53
+core/media-service/include/streampreview/streampreviewmgr.h
+  s_c488f00bc49201::t_d56fd8294f51a0 1-34
+core/media-service/include/streampreview/videoframe.h
+  s_c488f00bc49201::t_463864beb01927 1-38
+core/media-service/src/application.cpp
+  s_8aa3beaecb87b3::t_12fccf6068d35d 22,102
+core/media-service/src/ipchandlers/ipchandlers.cpp
+  s_5cabaf828b705a::t_84e702a5771c60 4,17
+core/media-service/src/ipchandlers/streampreviewhandler.cpp
+  s_c488f00bc49201::t_f5cd805c2c2bac 1-24
+core/media-service/src/ipchandlers/streampreviewhandler.h
+  s_c488f00bc49201::t_aa498ae335340d 1-10
+core/media-service/src/streampreview/framebuffer.cpp
+  s_c488f00bc49201::t_2f9cc5b05f3920 1-58
+core/media-service/src/streampreview/framebuffer.h
+  s_c488f00bc49201::t_850713a6cb893b 1-13
+core/media-service/src/streampreview/gpudevice.h
+  s_c488f00bc49201::t_99f6eac2f4ebdc 1-20
+core/media-service/src/streampreview/platform/win/gpudevice.cpp
+  s_c488f00bc49201::t_94eb0c04d86094 1-266
+core/media-service/src/streampreview/streampreview.cpp
+  s_c488f00bc49201::t_3902a4d3867359 1-140
+core/media-service/src/streampreview/streampreview_p.h
+  s_c488f00bc49201::t_9514b264aca487 1-33
+core/media-service/src/streampreview/streampreviewmgr.cpp
+  s_c488f00bc49201::t_f1a39e24f7918c 1-96
+core/node-streampreview/src/texturehandle.cpp
+  s_c488f00bc49201::t_a93156ae0fb27c 1-89
+electron/src/app/components/BrowserView.tsx
+  s_9117c707e60c66::t_c283eacbc7abae 1-144
+electron/src/common/ipcs/domain.ts
+  s_1e1304af24d561::t_79802b8c7f5407 7-8
+electron/src/common/ipcs/envelope.ts
+  s_1e1304af24d561::t_60a053163d1c82 9,45-54,56,69-76,92,97-98
+electron/src/common/ipcs/ipc_protocol.ts
+  s_1e1304af24d561::t_27e3694f6bc07a 10,12,14
+electron/src/common/ipcs/ipc_streampreview.ts
+  s_c488f00bc49201::t_13e7d2792cea7e 1-7
+electron/src/common/ipcs/present-video-frame.ts
+  s_c488f00bc49201::t_0c1e61ceee754d 1-98
+electron/src/common/ipcs/release-video-frame.ts
+  s_c488f00bc49201::t_8f2924531882eb 1-58
+electron/src/common/ipcs/stream-preview-payload.ts
+  s_c488f00bc49201::t_547cb3788f5997 1-38
+electron/src/main/ipcmain/channels.ts
+  s_8aa3beaecb87b3::t_b2c5b3a2bb2dd5 4-5
+electron/src/main/mediaservice/NativeWindow.ts
+  s_1e1304af24d561::t_2552212112fef3 13,58-59
+electron/src/main/mediaservice/NativeWindowMgr.ts
+  s_1e1304af24d561::t_e2205225edbf9f 118-123
+electron/src/main/mediaservice/streampreview/TextureHandle.ts
+  s_c488f00bc49201::t_62c0815f22059c 1-10
+electron/src/main/remote.ts
+  s_8aa3beaecb87b3::t_b5672c03a1f10c 2,6-59
+electron/test/guest-remote-preload.cjs
+  s_741fae225419d9::t_72588b8b72c582 1-8
+electron/test/inspect-native-preview.ps1
+  s_8aa3beaecb87b3::t_54d9c5c6b07e7f 21,30,35,56,59,62-65,72,75
+electron/test/native-preview-smoke.mjs
+  s_36f94d9d008140::t_20212c53b31c08 9-11,135-224,229-246
+electron/test/window-smoke.mjs
+  s_36f94d9d008140::t_ed38cece6400bd 9,13
+schema/ipc_protocol.fbs
+  s_c488f00bc49201::t_7d5cc32651a45b 16,22,29
+schema/ipc_streampreview.fbs
+  s_c488f00bc49201::t_fbccd0ab80543d 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4e13a4c8a66266fe5ed0722890956eebf33e462c",
+  "prompts": {},
+  "logical_commit_id": "4e13a4c8a66266fe5ed0722890956eebf33e462c",
+  "sessions": {
+    "s_1e1304af24d561": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1200f-28c2-7e01-b37e-4c60c695957c",
+        "model": "unknown"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>"
+    },
+    "s_36f94d9d008140": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12532-4e20-7081-a726-c054dae37b57",
+        "model": "unknown"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>"
+    },
+    "s_5cabaf828b705a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ece-4be4-74d2-8d09-910314a3b83e",
+        "model": "unknown"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>"
+    },
+    "s_741fae225419d9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1252f-50e0-7fa0-8e10-c9a0de7088d1",
+        "model": "unknown"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>"
+    },
+    "s_8aa3beaecb87b3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a123ba-16b3-7021-9ed0-5c27038b08d7",
+        "model": "unknown"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>"
+    },
+    "s_9117c707e60c66": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1252f-4bf1-7b51-8919-c0637b9317a9",
+        "model": "unknown"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>"
+    },
+    "s_c488f00bc49201": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12532-4d5e-72e1-853d-21b56244ecfa",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>",
+      "total_additions": 2469,
+      "total_deletions": 746
+    }
+  }
+}
