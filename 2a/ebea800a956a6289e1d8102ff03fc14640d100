@@ -1,0 +1,75 @@
+core/media-service/src/ipchandlers/streampreviewhandler.cpp
+  s_c488f00bc49201::t_1999077b577779 12-13,17-31,37
+electron/src/common/ipcs/ipc_streampreview.ts
+  s_c488f00bc49201::t_2b8127bbd1e571 6
+electron/src/common/ipcs/stream-preview-payload.ts
+  s_c488f00bc49201::t_6c2d0e2a959771 22,31-32,36
+  s_c488f00bc49201::t_2b8127bbd1e571 6,13-14,19-20,25,34,39
+core/media-service/src/streampreview/streampreview_p.h
+  s_c488f00bc49201::t_e31133e0895213 31-32
+  s_c488f00bc49201::t_b62ab545ba4cc0 16,27,30
+  s_c488f00bc49201::t_cdb96262e399a8 6
+core/media-service/src/streampreview/streampreview.cpp
+  s_c488f00bc49201::t_cdb96262e399a8 30-31
+  s_c488f00bc49201::t_e31133e0895213 5,103,105-113,145,148-149,152-153,160,162-165,170-173,180-185
+  s_c488f00bc49201::t_b3cb6be0c42b50 8,150-151
+  s_c488f00bc49201::t_b62ab545ba4cc0 23-29,54,56-58,60-64,66,69-94,119-120,125-126,190-198,205-206,210-211
+electron/src/main/mediaservice/streampreview/StreamPreview.ts
+  s_c488f00bc49201::t_1999077b577779 25,29-32,64
+electron/src/app/components/StreamPreview/streamPreview.ts
+  s_c488f00bc49201::t_1999077b577779 119-122
+core/media-service/src/streampreview/framebuffer.cpp
+  s_c488f00bc49201::t_b62ab545ba4cc0 6,38-39,44-58,60-62,82-83,85-86,88-89,91-92
+  s_c488f00bc49201::t_3ba90ada503add 63-74,77,81,84,90,94-95
+electron/src/common/ipcs/release-stream-preview.ts
+  s_c488f00bc49201::t_2b8127bbd1e571 1-48
+core/media-service/include/streampreview/videoframe.h
+  s_c488f00bc49201::t_28810bab9f53ef 28
+core/common/ipcs/ipc_protocol.h
+  s_c488f00bc49201::t_2b8127bbd1e571 99-101,137-140
+core/media-service/include/streampreview/streampreview.h
+  s_c488f00bc49201::t_cdb96262e399a8 50-51
+  s_c488f00bc49201::t_b62ab545ba4cc0 49,52
+  s_c488f00bc49201::t_b3cb6be0c42b50 47
+electron/src/main/ipchandlers/StreamPreviewHandler.ts
+  s_c488f00bc49201::t_1999077b577779 7,18-28
+core/common/ipcs/ipc_streampreview.h
+  s_c488f00bc49201::t_2b8127bbd1e571 22-24,29,31,34,38-39,45,49,56,71-74,76,218-258,262,274-277
+core/media-service/src/streampreview/platform/win/gpudevice.cpp
+  s_c488f00bc49201::t_28810bab9f53ef 3,85-88,97-104,130-139,247-280,314
+  s_c488f00bc49201::t_016c4e5148bd68 59,154,166,185,191,207,210,306
+  s_c488f00bc49201::t_85f3e6bd761cf5 90-95,184,186-190,206,208-209,212,226-227
+  s_c488f00bc49201::t_5df3b6b070b8fa 10,203-204,211,213-225
+core/media-service/include/streampreview/streampreviewmgr.h
+  s_c488f00bc49201::t_1999077b577779 19
+schema/ipc_streampreview.fbs
+  s_c488f00bc49201::t_e644ff7334ab87 17-21,25
+electron/src/main/ipchandlers/registerHandlers.ts
+  s_c488f00bc49201::t_1999077b577779 7-8,11
+core/media-service/src/streampreview/streampreviewmgr.cpp
+  s_c488f00bc49201::t_1999077b577779 64-65
+electron/src/common/ipcs/ipc_protocol.ts
+  s_c488f00bc49201::t_2b8127bbd1e571 12
+core/media-service/src/streampreview/framebuffer.h
+  s_c488f00bc49201::t_b62ab545ba4cc0 5,12,14
+  s_c488f00bc49201::t_3ba90ada503add 10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2aebea800a956a6289e1d8102ff03fc14640d100",
+  "prompts": {},
+  "logical_commit_id": "2aebea800a956a6289e1d8102ff03fc14640d100",
+  "sessions": {
+    "s_c488f00bc49201": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12532-4d5e-72e1-853d-21b56244ecfa",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>",
+      "total_additions": 3384,
+      "total_deletions": 878
+    }
+  }
+}
