@@ -3,36 +3,40 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 import { PresentVideoFrame } from './present-video-frame.js';
+import { ReleaseStreamPreview } from './release-stream-preview.js';
 import { ReleaseVideoFrame } from './release-video-frame.js';
 
 
 export enum StreamPreviewPayload {
   NONE = 0,
   PresentVideoFrame = 1,
-  ReleaseVideoFrame = 2
+  ReleaseVideoFrame = 2,
+  ReleaseStreamPreview = 3
 }
 
 export function unionToStreamPreviewPayload(
   type: StreamPreviewPayload,
-  accessor: (obj:PresentVideoFrame|ReleaseVideoFrame) => PresentVideoFrame|ReleaseVideoFrame|null
-): PresentVideoFrame|ReleaseVideoFrame|null {
+  accessor: (obj:PresentVideoFrame|ReleaseStreamPreview|ReleaseVideoFrame) => PresentVideoFrame|ReleaseStreamPreview|ReleaseVideoFrame|null
+): PresentVideoFrame|ReleaseStreamPreview|ReleaseVideoFrame|null {
   switch(StreamPreviewPayload[type]) {
-    case 'NONE': return null; 
+    case 'NONE': return null;
     case 'PresentVideoFrame': return accessor(new PresentVideoFrame())! as PresentVideoFrame;
     case 'ReleaseVideoFrame': return accessor(new ReleaseVideoFrame())! as ReleaseVideoFrame;
+    case 'ReleaseStreamPreview': return accessor(new ReleaseStreamPreview())! as ReleaseStreamPreview;
     default: return null;
   }
 }
 
 export function unionListToStreamPreviewPayload(
-  type: StreamPreviewPayload, 
-  accessor: (index: number, obj:PresentVideoFrame|ReleaseVideoFrame) => PresentVideoFrame|ReleaseVideoFrame|null, 
+  type: StreamPreviewPayload,
+  accessor: (index: number, obj:PresentVideoFrame|ReleaseStreamPreview|ReleaseVideoFrame) => PresentVideoFrame|ReleaseStreamPreview|ReleaseVideoFrame|null,
   index: number
-): PresentVideoFrame|ReleaseVideoFrame|null {
+): PresentVideoFrame|ReleaseStreamPreview|ReleaseVideoFrame|null {
   switch(StreamPreviewPayload[type]) {
-    case 'NONE': return null; 
+    case 'NONE': return null;
     case 'PresentVideoFrame': return accessor(index, new PresentVideoFrame())! as PresentVideoFrame;
     case 'ReleaseVideoFrame': return accessor(index, new ReleaseVideoFrame())! as ReleaseVideoFrame;
+    case 'ReleaseStreamPreview': return accessor(index, new ReleaseStreamPreview())! as ReleaseStreamPreview;
     default: return null;
   }
 }

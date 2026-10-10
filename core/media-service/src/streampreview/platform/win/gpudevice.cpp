@@ -1,12 +1,13 @@
 #include "streampreview/gpudevice.h"
 
-#include <d3d11_1.h>
+#include <d3d11_4.h>
 #include <d3dcompiler.h>
 #include <dxgi1_2.h>
 #include <wrl/client.h>
 
 #include <array>
 #include <chrono>
+#include <cstring>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -55,6 +56,7 @@ struct TextureSlot
 {
     ComPtr<ID3D11Texture2D> texture;
     ComPtr<ID3D11RenderTargetView> target;
+    ComPtr<IDXGIKeyedMutex> mutex;
     HANDLE handle = nullptr;
     uint64_t token = 0;
     uint32_t width = 0;
@@ -80,7 +82,25 @@ public:
     ComPtr<ID3D11PixelShader> m_pixelShader;
     ComPtr<ID3D11Buffer> m_parameters;
     ComPtr<ID3D11Query> m_completion;
+    ComPtr<ID3D11DeviceContext4> m_context4;
+    ComPtr<ID3D11Fence> m_fence;
+    HANDLE m_completed = nullptr;
+    uint64_t m_fenceValue = 0;
     std::array<std::shared_ptr<TextureSlot>, 3> m_slots;
+    // 上传与转换在同一工作线程完成；输入纹理不必随消费端持有的输出槽位重复分配。
+    std::array<ComPtr<ID3D11Texture2D>, 3> m_planes;
+    std::array<ComPtr<ID3D11ShaderResourceView>, 3> m_views;
+    VideoPixelFormat m_inputFormat = VideoPixelFormat::BGRA;
+    uint32_t m_inputWidth = 0;
+    uint32_t m_inputHeight = 0;
+
+    ~GpuDevicePrivate()
+    {
+        if (m_completed)
+        {
+            ::CloseHandle(m_completed);
+        }
+    }
 
     void initialize()
     {
@@ -107,6 +127,16 @@ public:
         check(m_device->CreateBuffer(&buffer, nullptr, &m_parameters), "CreateBuffer");
         D3D11_QUERY_DESC query {D3D11_QUERY_EVENT, 0};
         check(m_device->CreateQuery(&query, &m_completion), "CreateQuery");
+        ComPtr<ID3D11Device5> device5;
+        if (SUCCEEDED(m_device.As(&device5)) && SUCCEEDED(m_context.As(&m_context4)) &&
+            SUCCEEDED(device5->CreateFence(0, D3D11_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence))))
+        {
+            m_completed = ::CreateEventW(nullptr, FALSE, FALSE, nullptr);
+            if (!m_completed)
+            {
+                throw std::runtime_error("CreateEvent(GPU completion) failed");
+            }
+        }
     }
 
     void prepare(TextureSlot& slot, uint32_t width, uint32_t height)
@@ -121,6 +151,7 @@ public:
             slot.handle = nullptr;
         }
         slot.target.Reset();
+        slot.mutex.Reset();
         slot.texture.Reset();
         D3D11_TEXTURE2D_DESC desc {};
         desc.Width = width;
@@ -132,6 +163,7 @@ public:
         desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
         desc.MiscFlags = D3D11_RESOURCE_MISC_SHARED_NTHANDLE | D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX;
         check(m_device->CreateTexture2D(&desc, nullptr, &slot.texture), "CreateTexture2D(shared)");
+        check(slot.texture.As(&slot.mutex), "IDXGIKeyedMutex");
         check(m_device->CreateRenderTargetView(slot.texture.Get(), nullptr, &slot.target), "CreateRenderTargetView");
         ComPtr<IDXGIResource1> resource;
         check(slot.texture.As(&resource), "IDXGIResource1");
@@ -149,8 +181,14 @@ public:
                                        static_cast<UINT>(frame.planes[0].stride), 0);
             return;
         }
-        std::array<ComPtr<ID3D11Texture2D>, 3> planes;
-        std::array<ComPtr<ID3D11ShaderResourceView>, 3> views;
+        if (m_inputFormat != frame.format || m_inputWidth != frame.width || m_inputHeight != frame.height)
+        {
+            m_views = {};
+            m_planes = {};
+            m_inputFormat = frame.format;
+            m_inputWidth = frame.width;
+            m_inputHeight = frame.height;
+        }
         ID3D11ShaderResourceView* resources[3] {};
         const unsigned count = frame.format == VideoPixelFormat::I420 ? 3 : 2;
         for (unsigned i = 0; i < count; ++i)
@@ -162,12 +200,31 @@ public:
             desc.ArraySize = 1;
             desc.Format = i == 1 && count == 2 ? DXGI_FORMAT_R8G8_UNORM : DXGI_FORMAT_R8_UNORM;
             desc.SampleDesc.Count = 1;
-            desc.Usage = D3D11_USAGE_IMMUTABLE;
+            desc.Usage = D3D11_USAGE_DYNAMIC;
+            desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
             desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-            D3D11_SUBRESOURCE_DATA data {frame.planes[i].data, static_cast<UINT>(frame.planes[i].stride), 0};
-            check(m_device->CreateTexture2D(&desc, &data, &planes[i]), "CreateTexture2D(plane)");
-            check(m_device->CreateShaderResourceView(planes[i].Get(), nullptr, &views[i]), "CreateShaderResourceView");
-            resources[i] = views[i].Get();
+            if (!m_planes[i])
+            {
+                check(m_device->CreateTexture2D(&desc, nullptr, &m_planes[i]), "CreateTexture2D(plane)");
+                check(m_device->CreateShaderResourceView(m_planes[i].Get(), nullptr, &m_views[i]), "CreateShaderResourceView");
+            }
+            D3D11_MAPPED_SUBRESOURCE mapped {};
+            check(m_context->Map(m_planes[i].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped), "Map(plane)");
+            const std::size_t bytes = i == 0 || count == 2 ? frame.width : frame.width / 2;
+            if (mapped.RowPitch == bytes && frame.planes[i].stride == bytes)
+            {
+                std::memcpy(mapped.pData, frame.planes[i].data, bytes * desc.Height);
+            }
+            else
+            {
+                for (std::size_t row = 0; row < desc.Height; ++row)
+                {
+                    std::memcpy(static_cast<uint8_t*>(mapped.pData) + row * mapped.RowPitch,
+                                frame.planes[i].data + row * frame.planes[i].stride, bytes);
+                }
+            }
+            m_context->Unmap(m_planes[i].Get(), 0);
+            resources[i] = m_views[i].Get();
         }
         const float values[] = {count == 2 ? 1.0f : 0.0f, frame.fullRange ? 1.0f : 0.0f,
                                 frame.matrix == VideoColorMatrix::BT709 ? 1.0f : 0.0f, 0};
@@ -186,6 +243,40 @@ public:
         m_context->OMSetRenderTargets(0, nullptr, nullptr);
         ID3D11ShaderResourceView* empty[3] {};
         m_context->PSSetShaderResources(0, 3, empty);
+    }
+
+    void complete()
+    {
+        if (m_fence)
+        {
+            const auto value = ++m_fenceValue;
+            check(m_context4->Signal(m_fence.Get(), value), "Signal(GPU completion)");
+            check(m_fence->SetEventOnCompletion(value, m_completed), "SetEventOnCompletion");
+            m_context->Flush();
+            if (::WaitForSingleObject(m_completed, 2000) != WAIT_OBJECT_0)
+            {
+                throw std::runtime_error("GPU completion wait failed");
+            }
+            check(m_device->GetDeviceRemovedReason(), "GPU completion");
+            return;
+        }
+        m_context->End(m_completion.Get());
+        m_context->Flush();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        for (;;)
+        {
+            const HRESULT result = m_context->GetData(m_completion.Get(), nullptr, 0, D3D11_ASYNC_GETDATA_DONOTFLUSH);
+            check(result, "GPU completion");
+            if (result == S_OK)
+            {
+                return;
+            }
+            if (std::chrono::steady_clock::now() >= deadline)
+            {
+                throw std::runtime_error("GPU completion timeout");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
     }
 };
 
@@ -212,8 +303,7 @@ bool GpuDevice::present(const VideoFrameView& frame, uint64_t token, SharedVideo
         }
         d.prepare(slot, frame.width, frame.height);
         // Chromium 的 D3D shared image 使用 key 0；交接前释放同一个 key。
-        ComPtr<IDXGIKeyedMutex> mutex;
-        check(slot.texture.As(&mutex), "IDXGIKeyedMutex");
+        const auto& mutex = slot.mutex;
         if (mutex->AcquireSync(0, 1000) != S_OK)
         {
             throw std::runtime_error("shared texture mutex timeout");
@@ -221,23 +311,7 @@ bool GpuDevice::present(const VideoFrameView& frame, uint64_t token, SharedVideo
         try
         {
             d.convert(frame, slot);
-            d.m_context->End(d.m_completion.Get());
-            d.m_context->Flush();
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-            for (;;)
-            {
-                const HRESULT result = d.m_context->GetData(d.m_completion.Get(), nullptr, 0, 0);
-                check(result, "GPU completion");
-                if (result == S_OK)
-                {
-                    break;
-                }
-                if (std::chrono::steady_clock::now() >= deadline)
-                {
-                    throw std::runtime_error("GPU completion timeout");
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
+            d.complete();
         }
         catch (...)
         {

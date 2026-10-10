@@ -22,8 +22,13 @@ export class StreamPreview {
   private handles: TextureHandleApi | null = null;
   private processId = 0;
   private generation = 0;
+  private releaseHandler: ((id: number) => void) | null = null;
 
   constructor(private readonly modulePath: () => string) {}
+
+  setReleaseHandler(handler: (id: number) => void): void {
+    this.releaseHandler = handler;
+  }
 
   connectionChanged(processId: number): void {
     ++this.generation;
@@ -56,6 +61,7 @@ export class StreamPreview {
     if (binding?.target !== target) return;
     binding.dispose();
     this.bindings.delete(id);
+    if (this.processId !== 0) this.releaseHandler?.(id);
   }
 
   stop(): void {

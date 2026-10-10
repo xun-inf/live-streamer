@@ -25,7 +25,7 @@ struct VideoPlane
 };
 
 // 正 stride；I420 为 Y/U/V，NV12 为 Y/UV，BGRA 为单平面。
-// 输入为 SDR；调用期间各平面必须保持有效，submitFrame 返回后即可归还第三方 buffer。
+// 输入为 SDR；普通提交在返回后即可归还 buffer，带 owner 的提交须保持像素不可变直到引用释放。
 struct VideoFrameView
 {
     VideoPixelFormat format = VideoPixelFormat::I420;

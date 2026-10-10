@@ -9,8 +9,23 @@ Domain StreamPreviewHandler::domain() const
 
 bool StreamPreviewHandler::onIpcMessage(const Envelope& envelope)
 {
-    if (envelope.domain() != Domain_StreamPreview || msApp == nullptr ||
-        envelope.stream_preview_type() != StreamPreviewPayload_ReleaseVideoFrame)
+    auto* app = msApp;
+    if (envelope.domain() != Domain_StreamPreview || app == nullptr)
+    {
+        return false;
+    }
+    if (envelope.stream_preview_type() == StreamPreviewPayload_ReleaseStreamPreview)
+    {
+        const auto* body = envelope.stream_preview_as_ReleaseStreamPreview();
+        if (body == nullptr)
+        {
+            return false;
+        }
+        const uint32_t id = body->id();
+        // close 会等待工作线程退出；放到生命周期线程，避免阻塞 IPC 收发和帧归还。
+        return app->eventLoop()->postTask([app, id] { app->streamPreviewMgr()->release(id); });
+    }
+    if (envelope.stream_preview_type() != StreamPreviewPayload_ReleaseVideoFrame)
     {
         return false;
     }
@@ -19,6 +34,6 @@ bool StreamPreviewHandler::onIpcMessage(const Envelope& envelope)
     {
         return false;
     }
-    msApp->streamPreviewMgr()->releaseFrame(body->id(), body->token());
+    app->streamPreviewMgr()->releaseFrame(body->id(), body->token());
     return true;
 }

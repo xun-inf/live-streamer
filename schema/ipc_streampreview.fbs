@@ -14,7 +14,13 @@ table ReleaseVideoFrame {
   token: ulong;
 }
 
+// 停止预览并回收空闲资源；在途帧仍须按 token 单独归还。
+table ReleaseStreamPreview {
+  id: uint;
+}
+
 union StreamPreviewPayload {
   PresentVideoFrame = 1,
   ReleaseVideoFrame = 2,
+  ReleaseStreamPreview = 3,
 }

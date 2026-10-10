@@ -19,35 +19,41 @@ struct PresentVideoFrameBuilder;
 struct ReleaseVideoFrame;
 struct ReleaseVideoFrameBuilder;
 
+struct ReleaseStreamPreview;
+struct ReleaseStreamPreviewBuilder;
+
 enum StreamPreviewPayload : uint8_t {
   StreamPreviewPayload_NONE = 0,
   StreamPreviewPayload_PresentVideoFrame = 1,
   StreamPreviewPayload_ReleaseVideoFrame = 2,
+  StreamPreviewPayload_ReleaseStreamPreview = 3,
   StreamPreviewPayload_MIN = StreamPreviewPayload_NONE,
-  StreamPreviewPayload_MAX = StreamPreviewPayload_ReleaseVideoFrame
+  StreamPreviewPayload_MAX = StreamPreviewPayload_ReleaseStreamPreview
 };
 
-inline const StreamPreviewPayload (&EnumValuesStreamPreviewPayload())[3] {
+inline const StreamPreviewPayload (&EnumValuesStreamPreviewPayload())[4] {
   static const StreamPreviewPayload values[] = {
     StreamPreviewPayload_NONE,
     StreamPreviewPayload_PresentVideoFrame,
-    StreamPreviewPayload_ReleaseVideoFrame
+    StreamPreviewPayload_ReleaseVideoFrame,
+    StreamPreviewPayload_ReleaseStreamPreview
   };
   return values;
 }
 
 inline const char * const *EnumNamesStreamPreviewPayload() {
-  static const char * const names[4] = {
+  static const char * const names[5] = {
     "NONE",
     "PresentVideoFrame",
     "ReleaseVideoFrame",
+    "ReleaseStreamPreview",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameStreamPreviewPayload(StreamPreviewPayload e) {
-  if (::flatbuffers::IsOutRange(e, StreamPreviewPayload_NONE, StreamPreviewPayload_ReleaseVideoFrame)) return "";
+  if (::flatbuffers::IsOutRange(e, StreamPreviewPayload_NONE, StreamPreviewPayload_ReleaseStreamPreview)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesStreamPreviewPayload()[index];
 }
@@ -62,6 +68,10 @@ template<> struct StreamPreviewPayloadTraits<PresentVideoFrame> {
 
 template<> struct StreamPreviewPayloadTraits<ReleaseVideoFrame> {
   static const StreamPreviewPayload enum_value = StreamPreviewPayload_ReleaseVideoFrame;
+};
+
+template<> struct StreamPreviewPayloadTraits<ReleaseStreamPreview> {
+  static const StreamPreviewPayload enum_value = StreamPreviewPayload_ReleaseStreamPreview;
 };
 
 bool VerifyStreamPreviewPayload(::flatbuffers::Verifier &verifier, const void *obj, StreamPreviewPayload type);
@@ -209,6 +219,47 @@ inline ::flatbuffers::Offset<ReleaseVideoFrame> CreateReleaseVideoFrame(
   return builder_.Finish();
 }
 
+struct ReleaseStreamPreview FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef ReleaseStreamPreviewBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ID = 4
+  };
+  uint32_t id() const {
+    return GetField<uint32_t>(VT_ID, 0);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_ID, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct ReleaseStreamPreviewBuilder {
+  typedef ReleaseStreamPreview Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_id(uint32_t id) {
+    fbb_.AddElement<uint32_t>(ReleaseStreamPreview::VT_ID, id, 0);
+  }
+  explicit ReleaseStreamPreviewBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<ReleaseStreamPreview> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<ReleaseStreamPreview>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<ReleaseStreamPreview> CreateReleaseStreamPreview(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t id = 0) {
+  ReleaseStreamPreviewBuilder builder_(_fbb);
+  builder_.add_id(id);
+  return builder_.Finish();
+}
+
 inline bool VerifyStreamPreviewPayload(::flatbuffers::Verifier &verifier, const void *obj, StreamPreviewPayload type) {
   switch (type) {
     case StreamPreviewPayload_NONE: {
@@ -220,6 +271,10 @@ inline bool VerifyStreamPreviewPayload(::flatbuffers::Verifier &verifier, const 
     }
     case StreamPreviewPayload_ReleaseVideoFrame: {
       auto ptr = reinterpret_cast<const ReleaseVideoFrame *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case StreamPreviewPayload_ReleaseStreamPreview: {
+      auto ptr = reinterpret_cast<const ReleaseStreamPreview *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;

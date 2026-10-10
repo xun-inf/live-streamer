@@ -116,6 +116,10 @@ export class StreamPreviewController {
   }
 
   private releaseResources(): void {
+    // 当前绑定的 program 会延迟删除；先解除绑定，组件卸载时即可释放引用。
+    this.context.useProgram(null);
+    this.context.bindBuffer(this.context.ARRAY_BUFFER, null);
+    this.context.bindTexture(this.context.TEXTURE_2D, null);
     this.context.deleteTexture(this.texture);
     this.context.deleteBuffer(this.vertices);
     this.context.deleteProgram(this.program);

@@ -4,6 +4,7 @@ import { Domain } from '../../common/ipcs/domain.js';
 import { Envelope } from '../../common/ipcs/envelope.js';
 import { PresentVideoFrame } from '../../common/ipcs/present-video-frame.js';
 import { ReleaseVideoFrame } from '../../common/ipcs/release-video-frame.js';
+import { ReleaseStreamPreview } from '../../common/ipcs/release-stream-preview.js';
 import { StreamPreviewPayload } from '../../common/ipcs/stream-preview-payload.js';
 import type { IpcClient } from '../mediaservice/IpcClient.js';
 import type { IpcHandler } from '../mediaservice/IpcHandler.js';
@@ -14,6 +15,17 @@ export class StreamPreviewHandler implements IpcHandler {
 
   domain(): Domain {
     return Domain.StreamPreview;
+  }
+
+  releasePreview(id: number): void {
+    const builder = new flatbuffers.Builder(64);
+    const body = ReleaseStreamPreview.createReleaseStreamPreview(builder, id);
+    Envelope.startEnvelope(builder);
+    Envelope.addDomain(builder, this.domain());
+    Envelope.addStreamPreviewType(builder, StreamPreviewPayload.ReleaseStreamPreview);
+    Envelope.addStreamPreview(builder, body);
+    builder.finish(Envelope.endEnvelope(builder));
+    this.client.send(builder.asUint8Array());
   }
 
   onIpcMessage(envelope: Envelope): boolean {

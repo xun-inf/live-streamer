@@ -61,6 +61,8 @@ void StreamPreviewMgr::release(uint32_t id)
         m_presenters.erase(it);
     }
     presenter->close();
+    // 不移除 m_frames：Electron 可能还未导入或仍在使用已发布的纹理，
+    // 必须等对应 ReleaseVideoFrame；token 全局唯一，不影响同 id 的新预览。
 }
 
 void StreamPreviewMgr::releaseFrame(uint32_t id, uint64_t token)

@@ -3,5 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion */
 
 export { PresentVideoFrame } from './present-video-frame.js';
+export { ReleaseStreamPreview } from './release-stream-preview.js';
 export { ReleaseVideoFrame } from './release-video-frame.js';
 export { StreamPreviewPayload } from './stream-preview-payload.js';

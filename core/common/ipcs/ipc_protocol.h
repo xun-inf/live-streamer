@@ -96,6 +96,9 @@ struct Envelope FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ReleaseVideoFrame *stream_preview_as_ReleaseVideoFrame() const {
     return stream_preview_type() == StreamPreviewPayload_ReleaseVideoFrame ? static_cast<const ReleaseVideoFrame *>(stream_preview()) : nullptr;
   }
+  const ReleaseStreamPreview *stream_preview_as_ReleaseStreamPreview() const {
+    return stream_preview_type() == StreamPreviewPayload_ReleaseStreamPreview ? static_cast<const ReleaseStreamPreview *>(stream_preview()) : nullptr;
+  }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int8_t>(verifier, VT_DOMAIN, 1) &&
@@ -131,6 +134,10 @@ template<> inline const PresentVideoFrame *Envelope::stream_preview_as<PresentVi
 
 template<> inline const ReleaseVideoFrame *Envelope::stream_preview_as<ReleaseVideoFrame>() const {
   return stream_preview_as_ReleaseVideoFrame();
+}
+
+template<> inline const ReleaseStreamPreview *Envelope::stream_preview_as<ReleaseStreamPreview>() const {
+  return stream_preview_as_ReleaseStreamPreview();
 }
 
 struct EnvelopeBuilder {

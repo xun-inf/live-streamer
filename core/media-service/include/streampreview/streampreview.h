@@ -44,8 +44,12 @@ public:
     StreamPreview& operator=(const StreamPreview&) = delete;
 
     // 线程安全；复制有效像素，最多保留一个待处理帧，新帧替换旧帧。
-    // Accepted 表示接受输入，不保证每一帧都显示；GPU 资源耗尽时丢帧。
+    // Accepted 表示接受输入，不保证每一帧都显示；GPU 资源耗尽时只保留最新待处理帧。
     VideoSubmitResult submitFrame(const VideoFrameView& frame);
+    // 不复制像素；owner 必须非空并保持所有平面有效且不可修改，直到本模块释放引用。
+    // 可使用第三方帧引用及自定义 deleter；引用可能在提交、工作或关闭线程释放。
+    // deleter 不得抛异常或重入本实例的 close/析构。
+    VideoSubmitResult submitFrame(const VideoFrameView& frame, std::shared_ptr<const void> owner);
     // 线程安全；只在消费端 GPU 引用全部释放后调用，重复/过期 token 无效。
     void releaseFrame(uint64_t token);
     // 生命周期线程调用，停止并等待工作线程；关闭后不能重新提交。

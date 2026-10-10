@@ -16,6 +16,7 @@ public:
     explicit StreamPreviewMgr(IpcServer& server);
     ~StreamPreviewMgr();
     std::shared_ptr<StreamPreview> create(uint32_t id);
+    // 停止预览，保留在途帧直至归还；再次预览须重新 create，旧对象返回 Closed。
     void release(uint32_t id);
     void releaseFrame(uint32_t id, uint64_t token);
     // 应用生命周期线程调用；先停止 IPC，禁止与 create 并发。
