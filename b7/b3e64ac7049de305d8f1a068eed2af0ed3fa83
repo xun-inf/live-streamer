@@ -1,0 +1,22 @@
+build-win-x84_64.bat
+  s_c488f00bc49201::t_f5449d6063493a 9-11,13-21,25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b7b3e64ac7049de305d8f1a068eed2af0ed3fa83",
+  "prompts": {},
+  "logical_commit_id": "b7b3e64ac7049de305d8f1a068eed2af0ed3fa83",
+  "sessions": {
+    "s_c488f00bc49201": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12532-4d5e-72e1-853d-21b56244ecfa",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "zhouxingbang1 <zhouxingbang1@bigo.sg>",
+      "total_additions": 3384,
+      "total_deletions": 878
+    }
+  }
+}
