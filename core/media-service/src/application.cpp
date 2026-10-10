@@ -19,6 +19,7 @@ MediaServiceApplication* MediaServiceApplication::s_instance = nullptr;
 MediaServiceApplication::MediaServiceApplication(int argc, char** argv)
     : m_config(argc, argv)
     , m_ipcServer([this] { m_eventLoop.requestQuit(); })
+    , m_streamPreviewMgr(m_ipcServer)
 {
     mediaservice::logger().setLogFile(m_config.logPath());
     MediaServiceApplication::s_instance = this;
@@ -98,6 +99,7 @@ void MediaServiceApplication::cleanup()
 {
     // 停止并等待 IPC 后，再由 UI 线程关闭窗口和清空事件循环。
     m_ipcServer.stop();
+    m_streamPreviewMgr.closeAll();
     m_nativeWindowMgr.closeAll();
     m_eventLoop.stop();
     m_initialized = false;

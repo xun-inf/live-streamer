@@ -6,6 +6,7 @@ import * as flatbuffers from 'flatbuffers';
 
 import { Domain } from './domain.js';
 import { NativeWindowPayload, unionToNativeWindowPayload, unionListToNativeWindowPayload } from './native-window-payload.js';
+import { StreamPreviewPayload, unionToStreamPreviewPayload, unionListToStreamPreviewPayload } from './stream-preview-payload.js';
 
 
 export class Envelope {
@@ -41,8 +42,18 @@ nativeWindow<T extends flatbuffers.Table>(obj:any):any|null {
   return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
 }
 
+streamPreviewType():StreamPreviewPayload {
+  const offset = this.bb!.__offset(this.bb_pos, 10);
+  return offset ? this.bb!.readUint8(this.bb_pos + offset) : StreamPreviewPayload.NONE;
+}
+
+streamPreview<T extends flatbuffers.Table>(obj:any):any|null {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.__union(obj, this.bb_pos + offset) : null;
+}
+
 static startEnvelope(builder:flatbuffers.Builder) {
-  builder.startObject(3);
+  builder.startObject(5);
 }
 
 static addDomain(builder:flatbuffers.Builder, domain:Domain) {
@@ -55,6 +66,14 @@ static addNativeWindowType(builder:flatbuffers.Builder, nativeWindowType:NativeW
 
 static addNativeWindow(builder:flatbuffers.Builder, nativeWindowOffset:flatbuffers.Offset) {
   builder.addFieldOffset(2, nativeWindowOffset, 0);
+}
+
+static addStreamPreviewType(builder:flatbuffers.Builder, streamPreviewType:StreamPreviewPayload) {
+  builder.addFieldInt8(3, streamPreviewType, StreamPreviewPayload.NONE);
+}
+
+static addStreamPreview(builder:flatbuffers.Builder, streamPreviewOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(4, streamPreviewOffset, 0);
 }
 
 static endEnvelope(builder:flatbuffers.Builder):flatbuffers.Offset {
@@ -70,11 +89,13 @@ static finishSizePrefixedEnvelopeBuffer(builder:flatbuffers.Builder, offset:flat
   builder.finish(offset, undefined, true);
 }
 
-static createEnvelope(builder:flatbuffers.Builder, domain:Domain, nativeWindowType:NativeWindowPayload, nativeWindowOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createEnvelope(builder:flatbuffers.Builder, domain:Domain, nativeWindowType:NativeWindowPayload, nativeWindowOffset:flatbuffers.Offset, streamPreviewType:StreamPreviewPayload, streamPreviewOffset:flatbuffers.Offset):flatbuffers.Offset {
   Envelope.startEnvelope(builder);
   Envelope.addDomain(builder, domain);
   Envelope.addNativeWindowType(builder, nativeWindowType);
   Envelope.addNativeWindow(builder, nativeWindowOffset);
+  Envelope.addStreamPreviewType(builder, streamPreviewType);
+  Envelope.addStreamPreview(builder, streamPreviewOffset);
   return Envelope.endEnvelope(builder);
 }
 }

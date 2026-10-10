@@ -115,6 +115,12 @@ export class NativeWindowMgr {
     for (const key of this.#entries.keys()) this.release(key);
   }
 
+  // 新的网页弹窗显示后，将原生画面重新放回 owner 正上方、其他弹窗下方。
+  refresh(): void {
+    if (this.#stopped || this.#loading) return;
+    for (const entry of this.#entries.values()) this.#refresh(entry);
+  }
+
   // 返回普通数据快照，便于业务查询和诊断，不暴露协议对象。
   list(): Array<{ key: string; id: number }> {
     return [...this.#entries].map(([key, entry]) => ({ key, id: entry.id }));

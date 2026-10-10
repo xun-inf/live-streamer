@@ -1,4 +1,4 @@
-export type PageName = 'Settings';
+export type PageName = 'Settings' | 'SecondScreen';
 
 // 页面使用的宿主能力声明，独立于主进程实现和外部源码目录。
 export interface AppStatus {
@@ -16,6 +16,7 @@ export interface NativeWindowRect {
 }
 
 export type Unsubscribe = () => void;
+export type StreamPreviewSubscribe = (id: number, consume: (frame: VideoFrame) => void) => Promise<() => Promise<void>>;
 
 export interface DesktopApi {
   mediaService: {
@@ -25,6 +26,7 @@ export interface DesktopApi {
 }
 
 export interface NativeWindowMgrApi {
+  refresh(): void;
   create(key: string): void;
   setRect(key: string, rect: NativeWindowRect): void;
   setVisible(key: string, visible: boolean): void;
@@ -58,6 +60,9 @@ export interface WindowConfig { pageUrls: Record<PageName, string>; preload: str
 
 declare global {
   interface Window {
+    streamPreview: {
+      subscribe: StreamPreviewSubscribe;
+    };
     desktop: DesktopApi;
     require(name: '@electron/remote'): typeof import('@electron/remote');
     require(name: 'electron'): typeof import('electron');

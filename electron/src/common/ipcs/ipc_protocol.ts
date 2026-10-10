@@ -7,5 +7,8 @@ export { DetachNativeWindow } from './detach-native-window.js';
 export { Domain } from './domain.js';
 export { Envelope } from './envelope.js';
 export { NativeWindowPayload } from './native-window-payload.js';
+export { PresentVideoFrame } from './present-video-frame.js';
 export { ReleaseNativeWindow } from './release-native-window.js';
+export { ReleaseVideoFrame } from './release-video-frame.js';
 export { SetNativeWindowRect } from './set-native-window-rect.js';
+export { StreamPreviewPayload } from './stream-preview-payload.js';

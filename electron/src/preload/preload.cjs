@@ -1,5 +1,6 @@
 // 本地 renderer 与 preload 共用上下文；原生窗口管理器由 renderer 直接通过 remote 获取。
 const { ipcRenderer } = require('electron');
+require('./streampreview.cjs');
 
 function subscribe(channel, handler) {
   const listener = (_event, payload) => handler(payload);

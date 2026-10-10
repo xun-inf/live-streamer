@@ -8,6 +8,8 @@ import { IpcClient } from './IpcClient.js';
 import type { AppPaths } from '../appPaths.js';
 import { logger } from '../logger.js';
 import { NativeWindowMgr } from './NativeWindowMgr.js';
+import { StreamPreview } from './streampreview/StreamPreview.js';
+import { registerHandlers } from '../ipchandlers/registerHandlers.js';
 
 export interface AppStatus {
   connected: boolean;
@@ -47,6 +49,8 @@ async function exitsWithin(exited: Promise<void>, timeoutMs: number): Promise<bo
 export class MediaService {
   private readonly client = new IpcClient();
   readonly nativeWindowMgr = new NativeWindowMgr(this.client);
+  readonly streamPreview = new StreamPreview(
+    () => path.join(path.dirname(this.options.paths.mediaServiceExe), 'node-streampreview.node'));
 
   private child: ChildProcess | null = null;
   private readiness: ProcessReadiness | null = null;
@@ -59,6 +63,7 @@ export class MediaService {
   private readonly statusListeners = new Set<(status: AppStatus) => void>();
 
   constructor() {
+    registerHandlers(this.client, this.streamPreview);
     this.client.setCloseHandler((reason) => {
       this.cancelConnection();
       if (!this.stopping) {
@@ -127,6 +132,7 @@ export class MediaService {
     }
     this.stopping = true;
     this.nativeWindowMgr.stop();
+    this.streamPreview.stop();
     const child = this.child;
     this.cancelConnection();
     this.stopPromise = child === null ? Promise.resolve() : this.stopProcess(child);
@@ -271,6 +277,7 @@ export class MediaService {
   }
 
   private cancelConnection(): void {
+    this.streamPreview.connectionChanged(0);
     ++this.generation;
     this.connecting = null;
     this.readiness?.cancel(new Error('media-service connection cancelled'));
@@ -316,6 +323,7 @@ export class MediaService {
       await this.client.connect(this.options.paths.pipeName, kConnectTimeoutMs);
       if (!this.isCurrent(generation)) return false;
       if (!this.client.connected) throw new Error('pipe closed during connection');
+      this.streamPreview.connectionChanged(this.child?.pid ?? 0);
       this.setStatus(true, '已连接');
       return true;
     } catch (error) {

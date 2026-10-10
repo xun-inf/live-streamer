@@ -6,11 +6,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { once } from 'node:events';
 import ts from 'typescript';
 import { app, BrowserWindow } from 'electron';
-import { mediaService } from '../dist/main/mediaService/index.js';
+import { mediaService } from '../dist/main/mediaservice/index.js';
 import { mainWindow } from '../dist/main/windows/mainWindow.js';
 import { childWindow } from '../dist/main/windows/childWindow.js';
 import { windowManager } from '../dist/main/windows/windowManager.js';
-import { NativeWindow } from '../dist/main/mediaService/NativeWindow.js';
+import { NativeWindow } from '../dist/main/mediaservice/NativeWindow.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;

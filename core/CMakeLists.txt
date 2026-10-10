@@ -39,6 +39,9 @@ endif()
 
 add_subdirectory(utils)
 add_subdirectory(media-service)
+if(WIN32)
+  add_subdirectory(node-streampreview)
+endif()
 
 # 统一输出目录：可执行文件都落到仓库根的 build/bin/<Config>（多配置生成器自动追加配置名，
 # 单配置生成器如 Ninja 则直接是 build/bin）。静态库和中间产物留在各自的 build/core 子目录里。

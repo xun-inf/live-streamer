@@ -10,6 +10,7 @@
     "build:app": "npm run typecheck:app && vite build",
     "build": "npm run build:main && npm run build:app",
     "test:windows": "npm run build && electron test/window-smoke.mjs",
+    "test:ipc-handlers": "npm run build:main && node --test test/ipc-handlers.mjs",
     "test:native-preview": "npm run build && electron test/native-preview-smoke.mjs",
     "start": "electron .",
     "dev": "npm run build:main && npm run typecheck:app && node scripts/dev.mjs",

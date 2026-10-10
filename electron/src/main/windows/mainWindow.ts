@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import type { AppPaths } from '../appPaths.js';
 import { logger } from '../logger.js';
-import { mediaService } from '../mediaService/index.js';
-import { IPC_CHANNELS } from '../ipc/channels.js';
+import { mediaService } from '../mediaservice/index.js';
+import { IPC_CHANNELS } from '../ipcmain/channels.js';
 import { windowManager } from './windowManager.js';
 
 interface MainWindowOptions {

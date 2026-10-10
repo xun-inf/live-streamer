@@ -1,6 +1,7 @@
 #include "ipchandlers.h"
 
 #include "nativewindowhandler.h"
+#include "streampreviewhandler.h"
 #include "ipcserver.h"
 #include "base/logger.h"
 
@@ -13,5 +14,5 @@ bool registerIpcHandlers(IpcServer& server)
         mediaservice::logger().logError("ipc", "failed to register native window IPC handler");
         return false;
     }
-    return true;
+    return server.registerHandler(std::make_shared<StreamPreviewHandler>());
 }

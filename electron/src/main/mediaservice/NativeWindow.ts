@@ -10,6 +10,7 @@ import { Domain } from '../../common/ipcs/domain.js';
 import { Envelope } from '../../common/ipcs/envelope.js';
 import { SetNativeWindowRect } from '../../common/ipcs/set-native-window-rect.js';
 import { NativeWindowPayload } from '../../common/ipcs/native-window-payload.js';
+import { StreamPreviewPayload } from '../../common/ipcs/stream-preview-payload.js';
 import type { IpcClient } from './IpcClient.js';
 
 type BodyBuilder = (builder: flatbuffers.Builder) => flatbuffers.Offset;
@@ -54,6 +55,8 @@ export class NativeWindow {
       Domain.NativeWindow,
       type,
       body,
+      StreamPreviewPayload.NONE,
+      0,
     );
     builder.finish(envelope);
     return this.client.send(builder.asUint8Array());

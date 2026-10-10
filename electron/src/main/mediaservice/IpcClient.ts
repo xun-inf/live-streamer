@@ -2,13 +2,16 @@
 // 每个连接独立持有接收缓冲和发送队列，关闭后不向新连接重放消息。
 
 import net from 'node:net';
+import { Domain } from '../../common/ipcs/domain.js';
+import { logger } from '../logger.js';
+import type { IpcHandler } from './IpcHandler.js';
+import { readEnvelope } from './IpcBuffer.js';
 
 const kLengthPrefixSize = 4;
 const kMaxFrameSize = 8 * 1024 * 1024;
 const kMaxBufferedSendBytes = 16 * 1024 * 1024;
 const kConnectTimeoutMs = 1000;
 
-export type FrameHandler = (payload: Buffer) => void;
 export type CloseHandler = (reason: string) => void;
 
 interface Connection {
@@ -26,7 +29,7 @@ interface Connection {
 
 export class IpcClient {
   private connection: Connection | null = null;
-  private frameHandler: FrameHandler | null = null;
+  private readonly handlers = new Map<Domain, IpcHandler>();
   private closeHandler: CloseHandler | null = null;
 
   connect(pipeName: string, timeoutMs = kConnectTimeoutMs): Promise<void> {
@@ -90,8 +93,13 @@ export class IpcClient {
     });
   }
 
-  setFrameHandler(handler: FrameHandler): void {
-    this.frameHandler = handler;
+  // 注册独立于连接生命周期；重连后保留，同一 Domain 不允许覆盖。
+  registerHandler(handler: IpcHandler): boolean {
+    const domain = handler.domain();
+    if (!Number.isInteger(domain) || domain === Domain.None ||
+        typeof Domain[domain] !== 'string' || this.handlers.has(domain)) return false;
+    this.handlers.set(domain, handler);
+    return true;
   }
 
   setCloseHandler(handler: CloseHandler): void {
@@ -208,12 +216,23 @@ export class IpcClient {
         connection.buffer.subarray(kLengthPrefixSize, kLengthPrefixSize + size),
       );
       connection.buffer = connection.buffer.subarray(kLengthPrefixSize + size);
-      try {
-        this.frameHandler?.(payload);
-      } catch (error) {
-        this.finishConnection(connection, new Error('IPC frame handler failed: ' + String(error)), true);
-        return;
+      this.dispatch(payload);
+    }
+  }
+
+  private dispatch(payload: Buffer): void {
+    try {
+      const envelope = readEnvelope(payload);
+      const domain = envelope.domain();
+      const handler = this.handlers.get(domain);
+      if (!handler) {
+        logger.warning('No IPC handler for domain: ' + String(domain));
+      } else if (!handler.onIpcMessage(envelope)) {
+        logger.warning('IPC handler rejected message for domain: ' + String(domain));
       }
+    } catch (error) {
+      // 与服务端一致：完整帧的解析/处理失败不阻止后续消息；帧长度错误仍关闭连接。
+      logger.warning('IPC message dispatch failed:', error);
     }
   }
 }

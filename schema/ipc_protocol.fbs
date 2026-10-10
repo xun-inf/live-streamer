@@ -13,17 +13,20 @@
 //   * Envelope 里只有 domain 指向的那个 union 字段会被填，其余为空
 
 include "ipc_nativewindow.fbs";
+include "ipc_streampreview.fbs";
 
 // 主业务标识：Envelope 按它选路由（Domain_xxx -> <域> handler）
 enum Domain : byte {
   None = 0,
   NativeWindow = 1,
+  StreamPreview = 2,
 }
 
 table Envelope {
   domain: Domain;
   // 一个业务一个 union 字段，对应各自 .fbs 里的 union
   native_window: NativeWindowPayload;
+  stream_preview: StreamPreviewPayload;
 }
 
 root_type Envelope;

@@ -4,5 +4,6 @@
 
 export enum Domain {
   None = 0,
-  NativeWindow = 1
+  NativeWindow = 1,
+  StreamPreview = 2
 }

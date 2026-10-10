@@ -7,7 +7,8 @@ set(_livestreamer_cpp_schema_dir "${LIVESTREAMER_ROOT}/core/common/ipcs")
 set(_livestreamer_ts_schema_dir "${LIVESTREAMER_ROOT}/electron/src/common/ipcs")
 set(_livestreamer_schemas
   "${_livestreamer_schema_dir}/ipc_protocol.fbs"
-  "${_livestreamer_schema_dir}/ipc_nativewindow.fbs")
+  "${_livestreamer_schema_dir}/ipc_nativewindow.fbs"
+  "${_livestreamer_schema_dir}/ipc_streampreview.fbs")
 
 add_custom_target(generate-schemas
   COMMAND "${CMAKE_COMMAND}" -E make_directory

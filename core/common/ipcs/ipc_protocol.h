@@ -14,6 +14,7 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
              "Non-compatible flatbuffers version included");
 
 #include "ipc_nativewindow.h"
+#include "ipc_streampreview.h"
 
 struct Envelope;
 struct EnvelopeBuilder;
@@ -21,29 +22,32 @@ struct EnvelopeBuilder;
 enum Domain : int8_t {
   Domain_None = 0,
   Domain_NativeWindow = 1,
+  Domain_StreamPreview = 2,
   Domain_MIN = Domain_None,
-  Domain_MAX = Domain_NativeWindow
+  Domain_MAX = Domain_StreamPreview
 };
 
-inline const Domain (&EnumValuesDomain())[2] {
+inline const Domain (&EnumValuesDomain())[3] {
   static const Domain values[] = {
     Domain_None,
-    Domain_NativeWindow
+    Domain_NativeWindow,
+    Domain_StreamPreview
   };
   return values;
 }
 
 inline const char * const *EnumNamesDomain() {
-  static const char * const names[3] = {
+  static const char * const names[4] = {
     "None",
     "NativeWindow",
+    "StreamPreview",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameDomain(Domain e) {
-  if (::flatbuffers::IsOutRange(e, Domain_None, Domain_NativeWindow)) return "";
+  if (::flatbuffers::IsOutRange(e, Domain_None, Domain_StreamPreview)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesDomain()[index];
 }
@@ -53,7 +57,9 @@ struct Envelope FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DOMAIN = 4,
     VT_NATIVE_WINDOW_TYPE = 6,
-    VT_NATIVE_WINDOW = 8
+    VT_NATIVE_WINDOW = 8,
+    VT_STREAM_PREVIEW_TYPE = 10,
+    VT_STREAM_PREVIEW = 12
   };
   Domain domain() const {
     return static_cast<Domain>(GetField<int8_t>(VT_DOMAIN, 0));
@@ -77,12 +83,28 @@ struct Envelope FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const ReleaseNativeWindow *native_window_as_ReleaseNativeWindow() const {
     return native_window_type() == NativeWindowPayload_ReleaseNativeWindow ? static_cast<const ReleaseNativeWindow *>(native_window()) : nullptr;
   }
+  StreamPreviewPayload stream_preview_type() const {
+    return static_cast<StreamPreviewPayload>(GetField<uint8_t>(VT_STREAM_PREVIEW_TYPE, 0));
+  }
+  const void *stream_preview() const {
+    return GetPointer<const void *>(VT_STREAM_PREVIEW);
+  }
+  template<typename T> const T *stream_preview_as() const;
+  const PresentVideoFrame *stream_preview_as_PresentVideoFrame() const {
+    return stream_preview_type() == StreamPreviewPayload_PresentVideoFrame ? static_cast<const PresentVideoFrame *>(stream_preview()) : nullptr;
+  }
+  const ReleaseVideoFrame *stream_preview_as_ReleaseVideoFrame() const {
+    return stream_preview_type() == StreamPreviewPayload_ReleaseVideoFrame ? static_cast<const ReleaseVideoFrame *>(stream_preview()) : nullptr;
+  }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int8_t>(verifier, VT_DOMAIN, 1) &&
            VerifyField<uint8_t>(verifier, VT_NATIVE_WINDOW_TYPE, 1) &&
            VerifyOffset(verifier, VT_NATIVE_WINDOW) &&
            VerifyNativeWindowPayload(verifier, native_window(), native_window_type()) &&
+           VerifyField<uint8_t>(verifier, VT_STREAM_PREVIEW_TYPE, 1) &&
+           VerifyOffset(verifier, VT_STREAM_PREVIEW) &&
+           VerifyStreamPreviewPayload(verifier, stream_preview(), stream_preview_type()) &&
            verifier.EndTable();
   }
 };
@@ -103,6 +125,14 @@ template<> inline const ReleaseNativeWindow *Envelope::native_window_as<ReleaseN
   return native_window_as_ReleaseNativeWindow();
 }
 
+template<> inline const PresentVideoFrame *Envelope::stream_preview_as<PresentVideoFrame>() const {
+  return stream_preview_as_PresentVideoFrame();
+}
+
+template<> inline const ReleaseVideoFrame *Envelope::stream_preview_as<ReleaseVideoFrame>() const {
+  return stream_preview_as_ReleaseVideoFrame();
+}
+
 struct EnvelopeBuilder {
   typedef Envelope Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
@@ -115,6 +145,12 @@ struct EnvelopeBuilder {
   }
   void add_native_window(::flatbuffers::Offset<void> native_window) {
     fbb_.AddOffset(Envelope::VT_NATIVE_WINDOW, native_window);
+  }
+  void add_stream_preview_type(StreamPreviewPayload stream_preview_type) {
+    fbb_.AddElement<uint8_t>(Envelope::VT_STREAM_PREVIEW_TYPE, static_cast<uint8_t>(stream_preview_type), 0);
+  }
+  void add_stream_preview(::flatbuffers::Offset<void> stream_preview) {
+    fbb_.AddOffset(Envelope::VT_STREAM_PREVIEW, stream_preview);
   }
   explicit EnvelopeBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -131,9 +167,13 @@ inline ::flatbuffers::Offset<Envelope> CreateEnvelope(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     Domain domain = Domain_None,
     NativeWindowPayload native_window_type = NativeWindowPayload_NONE,
-    ::flatbuffers::Offset<void> native_window = 0) {
+    ::flatbuffers::Offset<void> native_window = 0,
+    StreamPreviewPayload stream_preview_type = StreamPreviewPayload_NONE,
+    ::flatbuffers::Offset<void> stream_preview = 0) {
   EnvelopeBuilder builder_(_fbb);
+  builder_.add_stream_preview(stream_preview);
   builder_.add_native_window(native_window);
+  builder_.add_stream_preview_type(stream_preview_type);
   builder_.add_native_window_type(native_window_type);
   builder_.add_domain(domain);
   return builder_.Finish();

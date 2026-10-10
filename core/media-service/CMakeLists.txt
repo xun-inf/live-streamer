@@ -10,6 +10,10 @@ add_executable(mediaService
   src/main.cpp
   src/ipchandlers/ipchandlers.cpp
   src/ipchandlers/nativewindowhandler.cpp
+  src/ipchandlers/streampreviewhandler.cpp
+  src/streampreview/framebuffer.cpp
+  src/streampreview/streampreview.cpp
+  src/streampreview/streampreviewmgr.cpp
   # PE 资源：图标（config/app.ico）
   resources/app.rc)
 
@@ -38,4 +42,5 @@ target_link_libraries(mediaService PRIVATE
   user32
   gdi32
   d3d11
+  d3dcompiler
   dxgi)

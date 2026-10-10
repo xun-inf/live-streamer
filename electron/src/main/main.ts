@@ -3,8 +3,8 @@ import { app, nativeTheme } from 'electron';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { registerHandlers } from './ipc/registerHandlers.js';
-import { mediaService } from './mediaService/index.js';
+import { registerHandlers } from './ipcmain/registerHandlers.js';
+import { mediaService } from './mediaservice/index.js';
 import { argValue, resolvePaths } from './appPaths.js';
 import { logger } from './logger.js';
 import { initializeRemote } from './remote.js';
@@ -38,7 +38,8 @@ const nativeWindowMgr = mediaService.nativeWindowMgr;
 
 const appBaseUrl = devServerUrl || pathToFileURL(path.resolve(currentDir, '..', 'app') + path.sep).href;
 const windowConfig = {
-  pageUrls: { Settings: new URL('settings.html', appBaseUrl).href },
+  pageUrls: { Settings: new URL('settings.html', appBaseUrl).href,
+    SecondScreen: new URL('secondscreen.html', appBaseUrl).href },
   preload: path.join(sourceDir, 'preload', 'preload.cjs'),
 };
 Object.assign(globalThis, { nativeWindowMgr: nativeWindowMgr, windowManager, windowConfig });
@@ -65,7 +66,7 @@ app.on('before-quit', (event) => {
 app.on('window-all-closed', () => { void shutdown(); });
 app.whenReady().then(() => {
   if (shuttingDown) return;
-  unregisterHandlers = registerHandlers(mediaService);
+  unregisterHandlers = registerHandlers(mediaService, windowConfig.pageUrls.SecondScreen);
   mainWindow.create();
   childWindow.create();
 }).catch((error: unknown) => {

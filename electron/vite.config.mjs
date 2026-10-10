@@ -22,6 +22,7 @@ export default defineConfig(({ command }) => ({
       input: {
         main: fileURLToPath(new URL('./src/app/main.html', import.meta.url)),
         settings: fileURLToPath(new URL('./src/app/settings.html', import.meta.url)),
+        secondscreen: fileURLToPath(new URL('./src/app/secondscreen.html', import.meta.url)),
       },
     },
   },

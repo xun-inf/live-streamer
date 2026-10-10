@@ -4,6 +4,7 @@
 #include "ipcserver.h"
 #include "eventloop.h"
 #include "nativewindowmgr.h"
+#include "streampreview/streampreviewmgr.h"
 
 class MediaServiceApplication
 {
@@ -41,6 +42,11 @@ public:
         return &m_eventLoop;
     }
 
+    StreamPreviewMgr* streamPreviewMgr()
+    {
+        return &m_streamPreviewMgr;
+    }
+
     // initialize、exec 和析构在同一个 UI 线程调用，不在 exec 中重入。
     // 准备事件循环、窗口管理器和业务处理器，可重复调用。
     bool initialize();
@@ -61,6 +67,7 @@ private:
     IpcServer m_ipcServer;
 
     NativeWindowMgr m_nativeWindowMgr;
+    StreamPreviewMgr m_streamPreviewMgr;
 };
 
 #define msApp MediaServiceApplication::instance()

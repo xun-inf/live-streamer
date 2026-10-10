@@ -169,6 +169,7 @@ body {
 }
 .main-toolbar button:hover { background: #354252; }
 .preview-panel {
+  position: relative;
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
@@ -178,7 +179,8 @@ body {
   border-radius: 8px;
   overflow: hidden;
 }
-.preview-heading { padding: 12px 16px; background: var(--titlebar); }
+.preview-heading { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--titlebar); }
+.preview-browser-overlay { position: absolute; right: 20px; bottom: 20px; width: 300px; height: 180px !important; }
 .preview-heading h2 { margin: 0; font-size: 13px; font-weight: 500; }
 .page-error { margin: 0 24px 16px; color: #ff9696; }
 .settings-page { display: flex; flex: 1 1 0; min-height: 0; }
@@ -206,6 +208,10 @@ body {
 .main-toolbar button:focus-visible, .settings-navigation button:focus-visible { outline: 2px solid #8cc5ff; outline-offset: 2px; }
 .settings-content { flex: 1; min-width: 0; padding: 28px; overflow-y: auto; }
 .settings-empty { margin-top: 28px; padding: 32px 16px; border: 1px dashed #354252; border-radius: 8px; color: var(--muted); text-align: center; }
+.second-screen { display: flex; flex: 1; flex-direction: column; min-height: 0; padding: 20px 24px; }
+.second-screen p { color: var(--muted); }
+.second-screen-canvas { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; overflow: hidden; background: #000; border-radius: 8px; }
+.second-screen-canvas canvas { width: 100%; height: 100%; object-fit: contain; }
 @media (max-width: 560px) {
   .settings-navigation { flex-basis: 108px; padding: 12px 8px; }
   .settings-navigation button { padding: 10px 12px; }

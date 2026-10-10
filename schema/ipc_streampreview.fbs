@@ -1,0 +1,20 @@
+// StreamPreview：仅传共享纹理描述，不传 CPU 像素。
+// token 在一次服务进程生命周期内唯一，归还必须匹配 presenter 和 token。
+table PresentVideoFrame {
+  id: uint;
+  token: ulong;
+  handle: ulong;
+  width: uint;
+  height: uint;
+  timestamp_us: long;
+}
+
+table ReleaseVideoFrame {
+  id: uint;
+  token: ulong;
+}
+
+union StreamPreviewPayload {
+  PresentVideoFrame = 1,
+  ReleaseVideoFrame = 2,
+}
